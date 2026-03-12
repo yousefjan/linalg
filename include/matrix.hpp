@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <initializer_list>
 #include <vector>
+#include "vector.hpp"
 
 namespace linalg {
 
@@ -36,6 +37,12 @@ private:
     std::size_t cols_ = 0;
     std::vector<double> data_;
 };
+
+Matrix transpose(const Matrix& matrix);
+Matrix operator+(const Matrix& lhs, const Matrix& rhs);
+Matrix operator-(const Matrix& lhs, const Matrix& rhs);
+Vector operator*(const Matrix& matrix, const Vector& vector);
+Matrix operator*(const Matrix& lhs, const Matrix& rhs);
 
 }  // namespace linalg
 

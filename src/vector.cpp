@@ -83,6 +83,18 @@ Vector operator*(const Vector& v, double scalar) {
 
 Vector operator*(double scalar, const Vector& v) { return v * scalar; }
 
+Vector operator/(const Vector& v, double scalar) {
+    if (scalar == 0.0) {
+        throw std::invalid_argument("Vector scalar division requires a nonzero scalar");
+    }
+
+    Vector result(v.size());
+    for (std::size_t i = 0; i < v.size(); ++i) {
+        result[i] = v[i] / scalar;
+    }
+    return result;
+}
+
 double dot(const Vector& lhs, const Vector& rhs) {
     check_same_size(lhs, rhs, "Dot product");
 

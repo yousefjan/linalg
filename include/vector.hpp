@@ -41,6 +41,7 @@ Vector operator+(const Vector& lhs, const Vector& rhs);
 Vector operator-(const Vector& lhs, const Vector& rhs);
 Vector operator*(const Vector& v, double scalar);
 Vector operator*(double scalar, const Vector& v);
+Vector operator/(const Vector& v, double scalar);
 double dot(const Vector& lhs, const Vector& rhs);
 
 }  // namespace linalg

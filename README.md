@@ -1,6 +1,6 @@
 # Numerical Linear Algebra
 
-This repo contains a small C++ dense numerical linear algebra library for double, with a companion experiments directory for evaluating performance.
+This repo contains a small C++ dense numerical linear algebra library for `double`, with a companion experiments directory for evaluating performance.
 
 ## Build
 

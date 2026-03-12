@@ -1,6 +1,8 @@
 #include "linalg_error.hpp"
+#include "norms.hpp"
 #include "vector.hpp"
 
+#include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
 #include <type_traits>
@@ -85,4 +87,12 @@ TEST_CASE("Vector arithmetic enforces shape compatibility", "[vector]") {
     const Vector short_vec{1.0, 2.0};
     CHECK_THROWS_AS(a + short_vec, DimensionMismatchError);
     CHECK_THROWS_AS(linalg::dot(a, short_vec), DimensionMismatchError);
+}
+
+TEST_CASE("Vector 2-norm matches manually computed values", "[vector][norms]") {
+    const Vector v{3.0, 4.0};
+    CHECK(linalg::norm2(v) == Catch::Approx(5.0));
+
+    const Vector zero(5);
+    CHECK(linalg::norm2(zero) == Catch::Approx(0.0));
 }

@@ -13,6 +13,7 @@ option(LINEAR_ALGEBRA_BUILD_EXAMPLES "Build example programs" ON)
 add_library(linear_algebra
     src/vector.cpp
     src/matrix.cpp
+    src/norms.cpp
 )
 
 add_library(linear_algebra::core ALIAS linear_algebra)

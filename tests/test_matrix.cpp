@@ -1,11 +1,15 @@
+#include "linalg_error.hpp"
 #include "matrix.hpp"
 
+#include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
 #include <type_traits>
 #include <utility>
 
 using linalg::Matrix;
+using linalg::Vector;
+using linalg::DimensionMismatchError;
 
 TEST_CASE("Matrix constructors initialize dimensions and values", "[matrix]") {
     const Matrix empty;
@@ -93,4 +97,80 @@ TEST_CASE("Matrix copy, move, and initializer list keeps row-major layout", "[ma
 
 TEST_CASE("Matrix initializer list rejects unequal row lengths", "[matrix]") {
     CHECK_THROWS_AS((Matrix{{1.0, 2.0}, {3.0}}), std::invalid_argument);
+}
+
+TEST_CASE("Matrix transpose swaps rows and columns", "[matrix]") {
+    const Matrix a{{1.0, 2.0, 3.0}, {4.0, 5.0, 6.0}};
+    const Matrix at = linalg::transpose(a);
+
+    REQUIRE(at.rows() == 3);
+    REQUIRE(at.cols() == 2);
+    CHECK(at(0, 0) == 1.0);
+    CHECK(at(1, 0) == 2.0);
+    CHECK(at(2, 0) == 3.0);
+    CHECK(at(0, 1) == 4.0);
+    CHECK(at(1, 1) == 5.0);
+    CHECK(at(2, 1) == 6.0);
+}
+
+TEST_CASE("Matrix addition and subtraction enforce equal shapes", "[matrix]") {
+    const Matrix a{{1.0, 2.0}, {3.0, 4.0}};
+    const Matrix b{{0.5, -1.0}, {2.0, 1.5}};
+
+    const Matrix sum = a + b;
+    CHECK(sum(0, 0) == Catch::Approx(1.5));
+    CHECK(sum(0, 1) == Catch::Approx(1.0));
+    CHECK(sum(1, 0) == Catch::Approx(5.0));
+    CHECK(sum(1, 1) == Catch::Approx(5.5));
+
+    const Matrix diff = a - b;
+    CHECK(diff(0, 0) == Catch::Approx(0.5));
+    CHECK(diff(0, 1) == Catch::Approx(3.0));
+    CHECK(diff(1, 0) == Catch::Approx(1.0));
+    CHECK(diff(1, 1) == Catch::Approx(2.5));
+
+    const Matrix wrong_shape(3, 1);
+    CHECK_THROWS_AS(a + wrong_shape, DimensionMismatchError);
+    CHECK_THROWS_AS(a - wrong_shape, DimensionMismatchError);
+}
+
+TEST_CASE("Matrix-vector multiply checks dimensions", "[matrix]") {
+    const Matrix a{{1.0, 2.0, 3.0}, {0.0, -1.0, 4.0}};
+    const Vector x{2.0, -1.0, 0.5};
+
+    const Vector y = a * x;
+    REQUIRE(y.size() == 2);
+    CHECK(y[0] == Catch::Approx(1.5));
+    CHECK(y[1] == Catch::Approx(3.0));
+
+    const Vector wrong_size{1.0, 2.0};
+    CHECK_THROWS_AS(a * wrong_size, DimensionMismatchError);
+}
+
+TEST_CASE("Matrix-matrix multiply handles identity and shape checks", "[matrix]") {
+    const Matrix a{{1.0, 2.0}, {3.0, 4.0}, {5.0, 6.0}};
+    const Matrix identity = Matrix::identity(2);
+    const Matrix product = a * identity;
+
+    REQUIRE(product.rows() == a.rows());
+    REQUIRE(product.cols() == a.cols());
+    for (std::size_t i = 0; i < a.rows(); ++i) {
+        for (std::size_t j = 0; j < a.cols(); ++j) {
+            CHECK(product(i, j) == Catch::Approx(a(i, j)));
+        }
+    }
+
+    const Matrix lhs{{1.0, 2.0, 3.0}, {4.0, 5.0, 6.0}};
+    const Matrix rhs{{7.0, 8.0}, {9.0, 10.0}, {11.0, 12.0}};
+    const Matrix dense_product = lhs * rhs;
+
+    REQUIRE(dense_product.rows() == 2);
+    REQUIRE(dense_product.cols() == 2);
+    CHECK(dense_product(0, 0) == Catch::Approx(58.0));
+    CHECK(dense_product(0, 1) == Catch::Approx(64.0));
+    CHECK(dense_product(1, 0) == Catch::Approx(139.0));
+    CHECK(dense_product(1, 1) == Catch::Approx(154.0));
+
+    const Matrix incompatible(4, 1);
+    CHECK_THROWS_AS(lhs * incompatible, DimensionMismatchError);
 }
