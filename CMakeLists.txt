@@ -9,6 +9,8 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 option(LINEAR_ALGEBRA_BUILD_TESTS "Build unit tests" ON)
 option(LINEAR_ALGEBRA_BUILD_EXAMPLES "Build example programs" ON)
+set(LINEAR_ALGEBRA_SIMD "AUTO" CACHE STRING "SIMD backend for matmul: AUTO, NONE, AVX, AVX2, AVX512")
+set_property(CACHE LINEAR_ALGEBRA_SIMD PROPERTY STRINGS AUTO NONE AVX AVX2 AVX512)
 
 add_library(linear_algebra
     src/vector.cpp
@@ -27,8 +29,26 @@ target_compile_features(linear_algebra PUBLIC cxx_std_20)
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
     target_compile_options(linear_algebra PRIVATE -Wall -Wextra -Wpedantic -Wconversion)
+
+    if(LINEAR_ALGEBRA_SIMD STREQUAL "AVX")
+        target_compile_options(linear_algebra PRIVATE -mavx)
+    elseif(LINEAR_ALGEBRA_SIMD STREQUAL "AVX2")
+        target_compile_options(linear_algebra PRIVATE -mavx2)
+    elseif(LINEAR_ALGEBRA_SIMD STREQUAL "AVX512")
+        target_compile_options(linear_algebra PRIVATE -mavx512f)
+    elseif(LINEAR_ALGEBRA_SIMD STREQUAL "NONE")
+        target_compile_definitions(linear_algebra PRIVATE LINEAR_ALGEBRA_FORCE_SCALAR_MATMUL=1)
+    elseif(LINEAR_ALGEBRA_SIMD STREQUAL "AUTO")
+    else()
+        message(FATAL_ERROR "Unsupported LINEAR_ALGEBRA_SIMD value: ${LINEAR_ALGEBRA_SIMD}")
+    endif()
 elseif(MSVC)
     target_compile_options(linear_algebra PRIVATE /W4 /permissive-)
+    if(LINEAR_ALGEBRA_SIMD STREQUAL "NONE")
+        target_compile_definitions(linear_algebra PRIVATE LINEAR_ALGEBRA_FORCE_SCALAR_MATMUL=1)
+    elseif(NOT LINEAR_ALGEBRA_SIMD STREQUAL "AUTO")
+        message(WARNING "LINEAR_ALGEBRA_SIMD explicit x86 flags are only wired for Clang/GNU right now.")
+    endif()
 endif()
 
 if(LINEAR_ALGEBRA_BUILD_EXAMPLES)

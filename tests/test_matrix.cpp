@@ -174,3 +174,28 @@ TEST_CASE("Matrix-matrix multiply handles identity and shape checks", "[matrix]"
     const Matrix incompatible(4, 1);
     CHECK_THROWS_AS(lhs * incompatible, DimensionMismatchError);
 }
+
+TEST_CASE("Matrix-matrix multiply handles SIMD tail dimensions", "[matrix]") {
+    const Matrix lhs{
+        {1.0, 2.0, 3.0, 4.0, 5.0},
+        {6.0, 7.0, 8.0, 9.0, 10.0}
+    };
+    const Matrix rhs{
+        {1.0, 0.0, 2.0},
+        {0.0, 1.0, 3.0},
+        {1.0, 1.0, 4.0},
+        {0.0, 2.0, 5.0},
+        {1.0, 0.0, 6.0}
+    };
+
+    const Matrix product = lhs * rhs;
+    REQUIRE(product.rows() == 2);
+    REQUIRE(product.cols() == 3);
+
+    CHECK(product(0, 0) == Catch::Approx(9.0));
+    CHECK(product(0, 1) == Catch::Approx(13.0));
+    CHECK(product(0, 2) == Catch::Approx(70.0));
+    CHECK(product(1, 0) == Catch::Approx(24.0));
+    CHECK(product(1, 1) == Catch::Approx(33.0));
+    CHECK(product(1, 2) == Catch::Approx(170.0));
+}
