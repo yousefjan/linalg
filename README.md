@@ -2,7 +2,7 @@
 
 This repo contains a small C++ dense numerical linear algebra library for `double`, with a companion experiments directory for evaluating performance.
 
-The current matmul uses a vectorized dot-product kernel. The implementation supports compile-time SIMD backends for AVX, AVX2, AVX512, NEON (AArch64/ARM64).
+The current matmul uses a vectorized dot-product kernel. The implementation supports compile-time SIMD backends for `AVX`, `AVX2`, `AVX512`, and `NEON` on `AArch64`/`ARM64` with FP64 vector support.
 
 ## Build
 
@@ -25,8 +25,9 @@ Valid values are `AUTO`, `NONE`, `AVX`, `AVX2`, and `AVX512`. `AUTO` uses the co
 ctest --test-dir build --output-on-failure
 ```
 
-## Run the example
+## Run examples
 
 ```bash
-./build/solve_linear_system
+./build/linear_system
+./build/matmul
 ```

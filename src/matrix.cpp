@@ -11,7 +11,7 @@
 #include <immintrin.h>
 #endif
 
-#if !defined(LINEAR_ALGEBRA_FORCE_SCALAR_MATMUL) && defined(__ARM_NEON) && defined(__aarch64__) && !defined(__clangd__)
+#if !defined(LINEAR_ALGEBRA_FORCE_SCALAR_MATMUL) && defined(__ARM_NEON) && defined(__aarch64__) && defined(__ARM_FEATURE_FP64_VECTOR_ARITHMETIC)
 #include <arm_neon.h>
 #endif
 
@@ -114,7 +114,7 @@ double dot_product_avx(const double* lhs, const double* rhs, std::size_t count) 
 }
 #endif
 
-#if !defined(LINEAR_ALGEBRA_FORCE_SCALAR_MATMUL) && defined(__ARM_NEON) && defined(__aarch64__) && !defined(__clangd__)
+#if !defined(LINEAR_ALGEBRA_FORCE_SCALAR_MATMUL) && defined(__ARM_NEON) && defined(__aarch64__) && defined(__ARM_FEATURE_FP64_VECTOR_ARITHMETIC)
 double horizontal_sum(float64x2_t values) {
     return vgetq_lane_f64(values, 0) + vgetq_lane_f64(values, 1);
 }
@@ -146,7 +146,7 @@ double dot_product_simd(const double* lhs, const double* rhs, std::size_t count)
     return dot_product_avx2(lhs, rhs, count);
 #elif !defined(LINEAR_ALGEBRA_FORCE_SCALAR_MATMUL) && defined(__AVX__) && !defined(__AVX2__)
     return dot_product_avx(lhs, rhs, count);
-#elif !defined(LINEAR_ALGEBRA_FORCE_SCALAR_MATMUL) && defined(__ARM_NEON) && defined(__aarch64__) && !defined(__clangd__)
+#elif !defined(LINEAR_ALGEBRA_FORCE_SCALAR_MATMUL) && defined(__ARM_NEON) && defined(__aarch64__) && defined(__ARM_FEATURE_FP64_VECTOR_ARITHMETIC)
     return dot_product_neon(lhs, rhs, count);
 #else
     return dot_product_scalar(lhs, rhs, count);

@@ -16,4 +16,10 @@ public:
         : LinAlgError(message) {}
 };
 
+class SingularMatrixError : public LinAlgError {
+public:
+    explicit SingularMatrixError(const std::string& message)
+        : LinAlgError(message) {}
+};
+
 }  // namespace linalg

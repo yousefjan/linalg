@@ -16,6 +16,7 @@ add_library(linear_algebra
     src/vector.cpp
     src/matrix.cpp
     src/norms.cpp
+    src/triangular_solve.cpp
 )
 
 add_library(linear_algebra::core ALIAS linear_algebra)
@@ -52,12 +53,18 @@ elseif(MSVC)
 endif()
 
 if(LINEAR_ALGEBRA_BUILD_EXAMPLES)
-    add_executable(solve_linear_system examples/solve_linear_system.cpp)
-    target_link_libraries(solve_linear_system PRIVATE linear_algebra::core)
+    add_executable(linear_system examples/linear_system.cpp)
+    target_link_libraries(linear_system PRIVATE linear_algebra::core)
+
+    add_executable(matmul examples/matmul.cpp)
+    target_link_libraries(matmul PRIVATE linear_algebra::core)
 endif()
 
 if(LINEAR_ALGEBRA_BUILD_TESTS)
     include(FetchContent)
+endif()
+
+if(LINEAR_ALGEBRA_BUILD_TESTS)
 
     FetchContent_Declare(
         Catch2
@@ -72,6 +79,7 @@ if(LINEAR_ALGEBRA_BUILD_TESTS)
     add_executable(linear_algebra_tests
         tests/test_vector.cpp
         tests/test_matrix.cpp
+        tests/test_triangular_solve.cpp
     )
 
     target_link_libraries(linear_algebra_tests
