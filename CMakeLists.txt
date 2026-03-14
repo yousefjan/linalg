@@ -17,6 +17,7 @@ add_library(linear_algebra
     src/matrix.cpp
     src/norms.cpp
     src/triangular_solve.cpp
+    src/lu.cpp
 )
 
 add_library(linear_algebra::core ALIAS linear_algebra)
@@ -60,6 +61,12 @@ if(LINEAR_ALGEBRA_BUILD_EXAMPLES)
     target_link_libraries(matmul PRIVATE linear_algebra::core)
 endif()
 
+option(LINEAR_ALGEBRA_BUILD_EXPERIMENTS "Build experiment programs" ON)
+if(LINEAR_ALGEBRA_BUILD_EXPERIMENTS)
+    add_executable(pivoting_vs_no_pivoting experiments/pivoting_vs_no_pivoting.cpp)
+    target_link_libraries(pivoting_vs_no_pivoting PRIVATE linear_algebra::core)
+endif()
+
 if(LINEAR_ALGEBRA_BUILD_TESTS)
     include(FetchContent)
 endif()
@@ -80,6 +87,7 @@ if(LINEAR_ALGEBRA_BUILD_TESTS)
         tests/test_vector.cpp
         tests/test_matrix.cpp
         tests/test_triangular_solve.cpp
+        tests/test_lu.cpp
     )
 
     target_link_libraries(linear_algebra_tests
