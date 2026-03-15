@@ -41,14 +41,11 @@ struct QRIterationOptions {
 
 
 struct QRIterationResult {
-    // Real and imaginary parts of the n eigenvalues.
     // For symmetric inputs all imaginary parts are zero.
-    // Complex-conjugate pairs from 2×2 Schur blocks appear as ±imag entries.
-    // Both vectors always have length n (the matrix dimension).
+    // Complex-conjugate pairs from 2×2 Schur blocks appear as +/-imag entries.
     Vector eigenvalues_real;
     Vector eigenvalues_imag;
 
-    // Total number of QR steps performed before convergence or max_iterations.
     int iterations = 0;
 
     // Populated only when QRIterationOptions::track_convergence is true.
@@ -69,7 +66,7 @@ struct QRIterationResult {
 // triangular matrix with 1×1 blocks (real eigenvalue) and 2×2 blocks
 // (complex-conjugate pair) on the diagonal.
 //
-// Convergence rate: linear.  Per-step factor ≈ |lambda_{j+1} / lambda_j|
+// Convergence rate: linear.  Per-step factor ~= |lambda_{j+1} / lambda_j|
 // for the off-diagonal entries linking eigenvalue clusters j and j+1.
 // (T&B Lecture 28, Theorem 28.2)
 //
@@ -78,5 +75,91 @@ struct QRIterationResult {
 //                                opts.max_iterations steps.
 [[nodiscard]] QRIterationResult eigenvalues_unshifted(const Matrix& A,
                                                       QRIterationOptions opts = {});
+
+// ---------------------------------------------------------------------------
+// Wilkinson-shifted QR iteration
+// ---------------------------------------------------------------------------
+//
+// Same outer loop as Stage 1, but each step applies a shift σ chosen as
+// the eigenvalue of the bottom-right 2×2 block of A_{k-1} that is closest
+// to the (n,n) entry, then unshifts after the QR step:
+//
+//   factor  (A_{k-1} - σI) = Q_k R_k
+//   set     A_k = R_k Q_k + σI
+//
+// The Wilkinson shift (T&B Lecture 29; GVL §7.4.2):
+//   Given the bottom-right 2×2 block | a  b |
+//                                     | b  c |
+//   δ = (a - c) / 2
+//   σ = c - sign(δ) * b² / (|δ| + sqrt(δ² + b²))
+//   equivalently: the eigenvalue of the block closer to c.
+//
+// Convergence rate: typically cubic near a simple eigenvalue.
+// (T&B Lecture 29; GVL §7.5.1)
+//
+// Same exceptions as eigenvalues_unshifted.
+[[nodiscard]] QRIterationResult eigenvalues_shifted(const Matrix& A,
+                                                    QRIterationOptions opts = {});
+
+// ---------------------------------------------------------------------------
+// Stage 3: Hessenberg reduction algorithm
+// ---------------------------------------------------------------------------
+
+// Givens rotation G acting on rows/columns i and i+1:
+//
+//   G = | c   s |  chosen so that G * [x; y]^T = [r; 0]^T
+//       | -s  c |  with c = x/r, s = y/r, r = hypot(x, y)
+//
+// T&B Lecture 10 (Givens rotations).
+struct GivensRotation {
+    double      c;  // cos(theta)
+    double      s;  // sin(theta)
+    std::size_t i;  // first row/column index (second is i+1)
+
+    // Construct the rotation that maps [x, y]^T → [hypot(x,y), 0]^T.
+    // Returns the identity (c=1, s=0) when x == y == 0.
+    [[nodiscard]] static GivensRotation make(double x, double y,
+                                             std::size_t row_index);
+
+    // Apply G from the left to rows i and i+1 of M, columns [col_start, n).
+    // M[i:i+2, col_start:] ← G * M[i:i+2, col_start:]
+    void apply_left(Matrix& M, std::size_t col_start = 0) const;
+
+    // Apply G^T from the right to columns i and i+1 of M, rows [0, row_end).
+    // M[0:row_end, i:i+2] ← M[0:row_end, i:i+2] * G^T
+    void apply_right(Matrix& M, std::size_t row_end) const;
+};
+
+// Result of reducing A to upper Hessenberg form.
+// H is upper Hessenberg: H(i,j) = 0 for all i > j+1.
+// Q is orthogonal and A = Q H Q^T.
+// Ref: GVL Algorithm 7.4.2; T&B Lecture 26.
+struct HessenbergResult {
+    Matrix H;  // upper Hessenberg similarity of A
+    Matrix Q;  // accumulated orthogonal transformation
+};
+
+// Reduce A to upper Hessenberg form via Householder reflectors applied
+// from both sides.  Costs O(10n³/3) flops; done once before QR iteration.
+// Ref: GVL §7.4.2 (Algorithm 7.4.2).
+//
+// Throws DimensionMismatchError if A is not square.
+[[nodiscard]] HessenbergResult hessenberg_reduction(const Matrix& A);
+
+// Apply one shifted QR step to an upper Hessenberg matrix H in-place,
+// using n-1 Givens rotations.  Costs O(n²) vs O(n³) for Householder QR.
+// H remains upper Hessenberg after the step.
+// Ref: GVL §7.4.2; T&B Lecture 29.
+void hessenberg_qr_step(Matrix& H, double sigma);
+
+// Full practical QR algorithm:
+//   1. Reduce A to Hessenberg H = Q^T A Q  (O(n³), done once).
+//   2. Run Wilkinson-shifted QR on H using Givens steps  (O(n²) each).
+// Substantially faster than eigenvalues_shifted for n ≥ 50.
+// Ref: T&B Lecture 29.
+//
+// Same exceptions as eigenvalues_unshifted.
+[[nodiscard]] QRIterationResult eigenvalues_hessenberg(const Matrix& A,
+                                                       QRIterationOptions opts = {});
 
 }  // namespace linalg

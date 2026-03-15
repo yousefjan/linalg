@@ -82,12 +82,11 @@ TEST_CASE("LU factorization: 3x3 known system", "[lu]") {
     REQUIRE(lu.U.rows() == 3);
     REQUIRE(lu.perm.size() == 3);
 
-    // L must have unit diagonal.
     for (std::size_t i = 0; i < 3; ++i) {
         CHECK(lu.L(i, i) == Catch::Approx(1.0));
     }
 
-    // Reconstruction: ||PA - LU|| must be near zero.
+    // ||PA - LU|| must be near zero.
     CHECK(reconstruction_error(A, lu) == Catch::Approx(0.0).margin(1e-12));
 }
 
@@ -102,7 +101,7 @@ TEST_CASE("LU factorization: identity matrix", "[lu]") {
 }
 
 TEST_CASE("LU factorization: matrix requiring row swaps", "[lu]") {
-    // First column entry is zero — no-pivot LU would immediately fail.
+    // First column entry is zero. No-pivot LU would immediately fail.
     const Matrix A{
         {0.0, 1.0, 2.0},
         {3.0, 4.0, 5.0},

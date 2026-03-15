@@ -66,7 +66,6 @@ double orthogonality_error(const QRResult& qr) {
 using Clock = std::chrono::high_resolution_clock;
 using Seconds = std::chrono::duration<double>;
 
-// Run fn() `trials` times, return minimum elapsed seconds.
 template<typename Fn>
 double min_time(Fn fn, int trials = 5) {
     double best = 1e18;
@@ -116,7 +115,7 @@ void print_row(const std::string& method, std::optional<Result> r) {
 
 int main() {
     std::cout << std::string(70, '*') << "\n";
-    std::cout << "  Hilbert QR Experiment — comparing GS variants and Householder\n";
+    std::cout << "  Hilbert QR Experiment: comparing GS variants and Householder\n";
     std::cout << std::string(70, '*') << "\n\n";
     std::cout <<
         "H[i][j] = 1/(i+j+1).  Condition number grows ~exponentially with n.\n"
