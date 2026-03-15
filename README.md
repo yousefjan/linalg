@@ -25,9 +25,23 @@ Valid values are `AUTO`, `NONE`, `AVX`, `AVX2`, and `AVX512`. `AUTO` uses the co
 ctest --test-dir build --output-on-failure
 ```
 
+## What's implemented
+
+- Matrix / Vector core with SIMD matmul
+- Triangular solvers (forward / backward substitution)
+- LU factorization with partial pivoting (`lu_factor`, `lu_solve`)
+- QR factorization — classical GS, modified GS, and Householder (`qr_classical_gs`, `qr_modified_gs`, `qr_householder`)
+
 ## Run examples
 
 ```bash
 ./build/linear_system
 ./build/matmul
+```
+
+## Run experiments
+
+```bash
+./build/pivoting_vs_no_pivoting   
+./build/hilbert_qr              
 ```

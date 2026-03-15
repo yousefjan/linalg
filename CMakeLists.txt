@@ -18,6 +18,7 @@ add_library(linear_algebra
     src/norms.cpp
     src/triangular_solve.cpp
     src/lu.cpp
+    src/qr.cpp
 )
 
 add_library(linear_algebra::core ALIAS linear_algebra)
@@ -65,6 +66,9 @@ option(LINEAR_ALGEBRA_BUILD_EXPERIMENTS "Build experiment programs" ON)
 if(LINEAR_ALGEBRA_BUILD_EXPERIMENTS)
     add_executable(pivoting_vs_no_pivoting experiments/pivoting_vs_no_pivoting.cpp)
     target_link_libraries(pivoting_vs_no_pivoting PRIVATE linear_algebra::core)
+
+    add_executable(hilbert_qr experiments/hilbert_qr.cpp)
+    target_link_libraries(hilbert_qr PRIVATE linear_algebra::core)
 endif()
 
 if(LINEAR_ALGEBRA_BUILD_TESTS)
@@ -88,6 +92,7 @@ if(LINEAR_ALGEBRA_BUILD_TESTS)
         tests/test_matrix.cpp
         tests/test_triangular_solve.cpp
         tests/test_lu.cpp
+        tests/test_qr.cpp
     )
 
     target_link_libraries(linear_algebra_tests

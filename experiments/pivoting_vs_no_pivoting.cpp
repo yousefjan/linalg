@@ -246,15 +246,5 @@ int main() {
     exp_amplified_multiplier();
     exp_permutation();
 
-    std::cout << "\n" << std::string(60, '=') << "\n";
-    std::cout << "  Conclusion\n";
-    std::cout << std::string(60, '=') << "\n";
-    std::cout <<
-        "Partial pivoting keeps multipliers bounded by 1 in magnitude.\n"
-        "Without it, a near-zero pivot inflates multipliers and destroys\n"
-        "accuracy via catastrophic cancellation.  The 'epsilon pathology'\n"
-        "case is the textbook example: a pivot of 1e-15 makes no-pivot LU\n"
-        "compute x ≈ [0, 0.5] instead of the exact [1, 1].\n\n";
-
     return 0;
 }
