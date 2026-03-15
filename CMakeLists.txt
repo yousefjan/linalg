@@ -8,7 +8,6 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 option(LINEAR_ALGEBRA_BUILD_TESTS "Build unit tests" ON)
-option(LINEAR_ALGEBRA_BUILD_EXAMPLES "Build example programs" ON)
 set(LINEAR_ALGEBRA_SIMD "AUTO" CACHE STRING "SIMD backend for matmul: AUTO, NONE, AVX, AVX2, AVX512")
 set_property(CACHE LINEAR_ALGEBRA_SIMD PROPERTY STRINGS AUTO NONE AVX AVX2 AVX512)
 
@@ -19,6 +18,7 @@ add_library(linear_algebra
     src/triangular_solve.cpp
     src/lu.cpp
     src/qr.cpp
+    src/qr_iteration.cpp
 )
 
 add_library(linear_algebra::core ALIAS linear_algebra)
@@ -54,14 +54,6 @@ elseif(MSVC)
     endif()
 endif()
 
-if(LINEAR_ALGEBRA_BUILD_EXAMPLES)
-    add_executable(linear_system examples/linear_system.cpp)
-    target_link_libraries(linear_system PRIVATE linear_algebra::core)
-
-    add_executable(matmul examples/matmul.cpp)
-    target_link_libraries(matmul PRIVATE linear_algebra::core)
-endif()
-
 option(LINEAR_ALGEBRA_BUILD_EXPERIMENTS "Build experiment programs" ON)
 if(LINEAR_ALGEBRA_BUILD_EXPERIMENTS)
     add_executable(pivoting_vs_no_pivoting experiments/pivoting_vs_no_pivoting.cpp)
@@ -69,6 +61,9 @@ if(LINEAR_ALGEBRA_BUILD_EXPERIMENTS)
 
     add_executable(hilbert_qr experiments/hilbert_qr.cpp)
     target_link_libraries(hilbert_qr PRIVATE linear_algebra::core)
+
+    add_executable(matmul experiments/matmul.cpp)
+    target_link_libraries(matmul PRIVATE linear_algebra::core)
 endif()
 
 if(LINEAR_ALGEBRA_BUILD_TESTS)
@@ -93,6 +88,7 @@ if(LINEAR_ALGEBRA_BUILD_TESTS)
         tests/test_triangular_solve.cpp
         tests/test_lu.cpp
         tests/test_qr.cpp
+        tests/test_qr_iteration.cpp
     )
 
     target_link_libraries(linear_algebra_tests

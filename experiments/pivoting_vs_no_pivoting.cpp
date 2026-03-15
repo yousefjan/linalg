@@ -1,8 +1,3 @@
-// Experiment: partial pivoting vs no-pivot LU
-//
-// Demonstrates why partial pivoting is essential for numerical stability.
-// Run the binary and inspect the residuals printed to stdout.
-
 #include "lu.hpp"
 #include "matrix.hpp"
 #include "norms.hpp"
@@ -23,7 +18,6 @@ using linalg::Vector;
 
 // ---------------------------------------------------------------------------
 // Local no-pivot LU for comparison only.
-// This is intentionally naive — it is here to show what breaks without pivoting.
 // ---------------------------------------------------------------------------
 
 struct NoPivotLU {
@@ -55,8 +49,6 @@ NoPivotLU lu_no_pivot(const Matrix& A, double tol = 1e-14) {
     return NoPivotLU{std::move(L), std::move(U), false, 0};
 }
 
-// Solve using a no-pivot LU (L unit lower triangular, U upper triangular).
-// If the factorization failed or U is numerically singular, returns nullopt.
 std::optional<Vector> solve_no_pivot(const NoPivotLU& f, const Vector& b) {
     if (f.failed) return std::nullopt;
     try {
@@ -178,8 +170,6 @@ void exp_random(std::size_t n = 8) {
 }
 
 // 2. Badly row-scaled matrix
-//    Rows differ in magnitude by ~10^14.  Without pivoting, tiny early pivots
-//    amplify round-off; with pivoting, the large-row is selected first.
 void exp_badly_scaled() {
     const Matrix A{
         {1e-14, 1.0,   2.0  },
@@ -191,21 +181,15 @@ void exp_badly_scaled() {
 }
 
 // 3. Classic pathological example for no-pivot LU.
-//    With epsilon = 1e-15, no-pivot computes a huge multiplier (1/epsilon),
-//    which causes catastrophic cancellation in the updated rows.
-//    With pivoting, we swap first and the multiplier is bounded by 1.
 void exp_epsilon_pathology() {
     constexpr double eps = 1e-15;
     const Matrix A{{eps, 1.0}, {1.0, 2.0}};
-    //  True solution of [eps 1; 1 2] * x = [1+eps; 3] is x = [1; 1].
     const Vector b{1.0 + eps, 3.0};
     run_case("Epsilon pathology [[1e-15,1],[1,2]] (classic)", A, b);
     std::cout << "  Note: exact solution is x = [1, 1]\n";
 }
 
 // 4. Matrix where no-pivot LU diverges visibly on a 4x4 example.
-//    The first pivot is small (0.001) but rows below have entries ~1000.
-//    No pivot causes multipliers of magnitude 10^6, annihilating subdiagonal info.
 void exp_amplified_multiplier() {
     const Matrix A{
         {0.001, 1.0,   0.0,   0.0  },

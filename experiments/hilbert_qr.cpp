@@ -1,9 +1,3 @@
-// Experiment: QR methods on Hilbert matrices
-//
-// The Hilbert matrix H[i][j] = 1/(i+j+1) is the canonical ill-conditioned
-// dense matrix.  Its condition number grows roughly as (3.5 * e)^n / sqrt(n),
-// reaching ~10^13 at n=10 and ~10^18 at n=14.
-//
 // We compare classical GS, modified GS, and Householder QR on:
 //   - reconstruction error   ||A - QR||_F
 //   - orthogonality error    ||Q^T Q - I||_F
@@ -68,9 +62,6 @@ double orthogonality_error(const QRResult& qr) {
     return std::sqrt(err);
 }
 
-// ---------------------------------------------------------------------------
-// Timing
-// ---------------------------------------------------------------------------
 
 using Clock = std::chrono::high_resolution_clock;
 using Seconds = std::chrono::duration<double>;
@@ -87,10 +78,6 @@ double min_time(Fn fn, int trials = 5) {
     }
     return best;
 }
-
-// ---------------------------------------------------------------------------
-// Run one method on one size, return {recon, ortho, time} or nullopt on failure
-// ---------------------------------------------------------------------------
 
 using QRFn = std::function<QRResult(const Matrix&)>;
 
@@ -109,10 +96,6 @@ std::optional<Result> measure(const Matrix& A, QRFn fn) {
         return std::nullopt;
     }
 }
-
-// ---------------------------------------------------------------------------
-// Pretty printing
-// ---------------------------------------------------------------------------
 
 void print_row(const std::string& method, std::optional<Result> r) {
     std::cout << std::left << std::setw(16) << method;

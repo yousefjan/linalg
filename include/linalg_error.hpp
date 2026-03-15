@@ -22,4 +22,10 @@ public:
         : LinAlgError(message) {}
 };
 
+class NonConvergenceError : public LinAlgError {
+public:
+    explicit NonConvergenceError(const std::string& message)
+        : LinAlgError(message) {}
+};
+
 }  // namespace linalg
