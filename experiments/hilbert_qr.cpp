@@ -1,8 +1,3 @@
-// We compare classical GS, modified GS, and Householder QR on:
-//   - reconstruction error   ||A - QR||_F
-//   - orthogonality error    ||Q^T Q - I||_F
-//   - wall-clock time (minimum over several trials)
-
 #include "matrix.hpp"
 #include "qr.hpp"
 
@@ -19,9 +14,7 @@
 using linalg::Matrix;
 using linalg::QRResult;
 
-// ---------------------------------------------------------------------------
-// Matrix construction
-// ---------------------------------------------------------------------------
+// --- Matrix construction ---
 
 Matrix hilbert(std::size_t n) {
     Matrix H(n, n);
@@ -31,9 +24,7 @@ Matrix hilbert(std::size_t n) {
     return H;
 }
 
-// ---------------------------------------------------------------------------
-// Metrics
-// ---------------------------------------------------------------------------
+// --- Metrics ---
 
 double reconstruction_error(const Matrix& A, const QRResult& qr) {
     const std::size_t m = A.rows();
@@ -84,11 +75,9 @@ struct Result { double recon, ortho, time_s; };
 
 std::optional<Result> measure(const Matrix& A, QRFn fn) {
     try {
-        // Run once to get metrics.
         const QRResult qr = fn(A);
         const double re = reconstruction_error(A, qr);
         const double oe = orthogonality_error(qr);
-        // Time over multiple trials.
         const double t = min_time([&] { fn(A); });
         return Result{re, oe, t};
     } catch (const std::exception&) {
@@ -109,18 +98,15 @@ void print_row(const std::string& method, std::optional<Result> r) {
               << std::setw(10) << r->time_s * 1e6 << " µs\n";
 }
 
-// ---------------------------------------------------------------------------
-// main
-// ---------------------------------------------------------------------------
 
 int main() {
     std::cout << std::string(70, '*') << "\n";
     std::cout << "  Hilbert QR Experiment: comparing GS variants and Householder\n";
     std::cout << std::string(70, '*') << "\n\n";
     std::cout <<
-        "H[i][j] = 1/(i+j+1).  Condition number grows ~exponentially with n.\n"
+        "H[i][j] = 1/(i+j+1). Condition number grows ~exponentially with n.\n"
         "Orthogonality loss in classical GS tracks condition number directly.\n"
-        "Modified GS recovers ~half the lost digits.  Householder is unaffected.\n\n";
+        "Modified GS recovers ~half the lost digits. Householder is unaffected.\n\n";
 
     const std::size_t sizes[] = {2, 3, 4, 5, 6, 7, 8, 10, 12};
 

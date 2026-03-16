@@ -19,10 +19,8 @@ LUResult lu_factor(const Matrix& A, double singular_tolerance) {
 
     const std::size_t n = A.rows();
 
-    // Working copy: elimination is performed in-place here.
     Matrix work = A;
 
-    // L starts as identity; multipliers fill the strict lower triangle.
     Matrix L = Matrix::zeros(n, n);
     for (std::size_t i = 0; i < n; ++i) {
         L(i, i) = 1.0;
@@ -30,7 +28,6 @@ LUResult lu_factor(const Matrix& A, double singular_tolerance) {
 
     Matrix U = Matrix::zeros(n, n);
 
-    // perm[i] = original row index now at position i.
     std::vector<std::size_t> perm(n);
     std::iota(perm.begin(), perm.end(), std::size_t{0});
     int sign = 1;
@@ -48,11 +45,9 @@ LUResult lu_factor(const Matrix& A, double singular_tolerance) {
         }
 
         if (pivot_row != k) {
-            // Swap rows in the working matrix.
             for (std::size_t j = 0; j < n; ++j) {
                 std::swap(work(k, j), work(pivot_row, j));
             }
-            // Swap already-computed multipliers in L (columns 0 .. k-1).
             for (std::size_t j = 0; j < k; ++j) {
                 std::swap(L(k, j), L(pivot_row, j));
             }
@@ -95,17 +90,14 @@ Vector lu_solve(const LUResult& lu, const Vector& b) {
         throw DimensionMismatchError(oss.str());
     }
 
-    // Step 1: apply permutation P.  (Pb)[i] = b[perm[i]]
     Vector pb(n);
     for (std::size_t i = 0; i < n; ++i) {
         pb[i] = b[lu.perm[i]];
     }
 
-    // Step 2: forward substitution  Ly = Pb  (L has unit diagonal)
     const Vector y = forward_substitution(lu.L, pb, /*singular_tolerance=*/1e-14,
                                           /*unit_diagonal=*/true);
 
-    // Step 3: backward substitution  Ux = y
     return backward_substitution(lu.U, y);
 }
 

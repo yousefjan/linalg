@@ -17,17 +17,11 @@ namespace linalg {
 
 namespace {
 
-// ---------------------------------------------------------------------------
-// Internal helpers
-// ---------------------------------------------------------------------------
 
 // Frobenius norm of the strict lower triangle of an n×n matrix.
 // This is the standard convergence diagnostic for QR iteration: as A_k
 // approaches the real Schur form, all entries below the main diagonal
 // (excluding 2×2 block sub-diagonals) tend to zero.
-//
-// ||lower(A)||_F = sqrt( sum_{i > j} A(i,j)^2 )
-//
 // Ref: T&B §28; used as the convergence criterion in Algorithm 28.1.
 double lower_triangle_norm(const Matrix& A) {
     const std::size_t n = A.rows();
@@ -54,8 +48,8 @@ double lower_triangle_norm(const Matrix& A) {
 void extract_eigenvalues(const Matrix& T, double tol,
                          Vector& real_out, Vector& imag_out) {
     const std::size_t n = T.rows();
-    std::size_t out = 0;  // next write position in real_out / imag_out
-    std::size_t i   = 0;  // current scan position in T
+    std::size_t out = 0;  
+    std::size_t i   = 0; 
 
     while (i < n) {
         const bool is_last   = (i + 1 == n);
@@ -74,15 +68,15 @@ void extract_eigenvalues(const Matrix& T, double tol,
             // Characteristic polynomial: lambda^2 - (a+d)*lambda + (ad - bc) = 0.
             // Discriminant: (a-d)^2 + 4*b*c.
             // Ref: GVL §7.4.1.
-            const double a    = T(i,     i);
-            const double b    = T(i,     i + 1);
-            const double c    = T(i + 1, i);
-            const double d    = T(i + 1, i + 1);
-            const double tr   = a + d;
+            const double a = T(i, i);
+            const double b = T(i, i + 1);
+            const double c = T(i + 1, i);
+            const double d = T(i + 1, i + 1);
+            const double tr = a + d;
             const double disc = (a - d) * (a - d) + 4.0 * b * c;
 
             if (disc >= 0.0) {
-                // Real eigenvalues — unusual in converged real Schur form, but
+                // Real eigenvalues unusual in converged real Schur form, but
                 // handled robustly in case the block didn't fully split.
                 const double sq   = std::sqrt(disc);
                 real_out[out]     = 0.5 * (tr + sq);
@@ -106,7 +100,6 @@ void extract_eigenvalues(const Matrix& T, double tol,
     assert(out == n);
 }
 
-// Verify that A is square; throw DimensionMismatchError otherwise.
 void require_square(const Matrix& A, const char* fname) {
     if (A.rows() != A.cols()) {
         std::ostringstream oss;
@@ -118,9 +111,7 @@ void require_square(const Matrix& A, const char* fname) {
 
 }  // namespace
 
-// ---------------------------------------------------------------------------
-// Stage 1: Unshifted QR iteration
-// ---------------------------------------------------------------------------
+// --- Unshifted QR iteration ---
 //
 // Each step performs an orthogonal similarity transformation:
 //   A_{k-1} = Q_k R_k   (Householder QR; backward-stable)
@@ -143,14 +134,9 @@ QRIterationResult eigenvalues_unshifted(const Matrix& A,
     require_square(A, "eigenvalues_unshifted");
     const std::size_t n = A.rows();
 
-    // Threshold for classifying a sub-diagonal entry as "zero" when reading
-    // eigenvalues out of the converged Schur form.  Using the same value as
-    // the convergence tolerance is appropriate; we only reach extraction once
-    // ||lower(A_k)||_F < opts.tolerance.  Ref: GVL §7.4.1.
     const double extract_tol = opts.tolerance;
 
     QRIterationResult result;
-    // Pre-size eigenvalue Vectors; they are always length n.
     result.eigenvalues_real = Vector(n, 0.0);
     result.eigenvalues_imag = Vector(n, 0.0);
 
@@ -159,17 +145,14 @@ QRIterationResult eigenvalues_unshifted(const Matrix& A,
             static_cast<std::size_t>(opts.max_iterations));
     }
 
-    // Handle the trivial 1×1 case immediately.
     if (n == 1) {
         result.eigenvalues_real[0] = A(0, 0);
         return result;
     }
 
-    // Working copy; becomes the quasi-upper-triangular Schur form A_k.
     Matrix Ak = A;
 
     for (int k = 0; k < opts.max_iterations; ++k) {
-        // --- QR step ---
         // Factor A_{k-1} = Q R using backward-stable Householder reflections.
         const QRResult qr = qr_householder(Ak);
 
@@ -192,9 +175,6 @@ QRIterationResult eigenvalues_unshifted(const Matrix& A,
         }
     }
 
-    // Maximum iterations reached without convergence — fail loudly.
-    // Possible causes: eigenvalues too close in magnitude, or complex
-    // eigenvalue pairs that require a double shift (see Stage 2).
     std::ostringstream oss;
     oss << "eigenvalues_unshifted: did not converge in "
         << opts.max_iterations << " iterations "
@@ -204,9 +184,7 @@ QRIterationResult eigenvalues_unshifted(const Matrix& A,
     throw NonConvergenceError(oss.str());
 }
 
-// ---------------------------------------------------------------------------
-// Stage 2: Wilkinson-shifted QR iteration
-// ---------------------------------------------------------------------------
+// --- Wilkinson-shifted QR iteration ---
 //
 // The Wilkinson shift is the eigenvalue of the bottom-right 2×2 block
 //   | a  b |
@@ -223,27 +201,14 @@ QRIterationResult eigenvalues_unshifted(const Matrix& A,
 
 namespace {
 
-// Wilkinson shift: eigenvalue of the symmetric 2×2 trailing block
-//   | a  b |
-//   | b  d |
-// that is closest to d.  Only the subdiagonal entry b = A(n-1, n-2) is used
-// for both off-diagonal positions; this treats the block as symmetric
-// regardless of the actual superdiagonal, which is the standard convention
-// (T&B Lecture 29, eq. 29.5; GVL §7.4.2).
-//
-// Numerically stable form avoids cancellation when |δ| >> b:
-//   σ = d − sign(δ) · b² / (|δ| + hypot(δ, b))
-// Discriminant δ² + b² is always ≥ 0, so no complex-shift fallback is needed.
 double wilkinson_shift(const Matrix& A) {
     const std::size_t n = A.rows();
-    const double a     = A(n - 2, n - 2);
-    const double b     = A(n - 1, n - 2);  // subdiagonal entry only
-    const double d     = A(n - 1, n - 1);
+    const double a = A(n - 2, n - 2);
+    const double b = A(n - 1, n - 2);  // subdiagonal entry only
+    const double d = A(n - 1, n - 1);
     const double delta = 0.5 * (a - d);
-    // denom = |δ| + sqrt(δ² + b²) = |δ| + hypot(δ, b)
     const double denom = std::abs(delta) + std::hypot(delta, b);
     if (denom == 0.0) return d;
-    // sign(δ) via (delta >= 0 ? +1 : -1); shifts toward the closer eigenvalue.
     const double sgn = (delta >= 0.0) ? 1.0 : -1.0;
     return d - sgn * (b * b) / denom;
 }
@@ -284,24 +249,20 @@ QRIterationResult eigenvalues_shifted(const Matrix& A, QRIterationOptions opts) 
 
     Matrix Ak = A;
 
-    // n_found: next write position (filled from index n-1 downward).
     std::size_t n_found = n;
     std::size_t active  = n;  // live subproblem is rows/cols 0..active-1
 
-    // Store one eigenvalue (real) from the current trailing position.
     auto store_real = [&](double re) {
         --n_found;
         result.eigenvalues_real[n_found] = re;
         result.eigenvalues_imag[n_found] = 0.0;
     };
 
-    // Store a complex-conjugate pair.
     auto store_pair = [&](double re, double im) {
         --n_found; result.eigenvalues_real[n_found] = re; result.eigenvalues_imag[n_found] =  im;
         --n_found; result.eigenvalues_real[n_found] = re; result.eigenvalues_imag[n_found] = -im;
     };
 
-    // Extract eigenvalues from a 2×2 block and store them.
     auto close_2x2 = [&]() {
         const double a    = Ak(active - 2, active - 2);
         const double b    = Ak(active - 2, active - 1);
@@ -321,7 +282,6 @@ QRIterationResult eigenvalues_shifted(const Matrix& A, QRIterationOptions opts) 
 
     for (int k = 0; k < opts.max_iterations; ++k) {
         // --- Deflation sweep ---
-        // Shrink active as many times as the trailing subdiagonal allows.
         while (active >= 2) {
             const double sub   = std::abs(Ak(active - 1, active - 2));
             const double scale = std::abs(Ak(active - 2, active - 2))
@@ -340,7 +300,6 @@ QRIterationResult eigenvalues_shifted(const Matrix& A, QRIterationOptions opts) 
         if (active == 2) { close_2x2();                       break; }
 
         // --- Wilkinson-shifted QR step on the active × active subblock ---
-        // Extract submatrix (copy in).
         Matrix sub_mat(active, active);
         for (std::size_t i = 0; i < active; ++i)
             for (std::size_t j = 0; j < active; ++j)
@@ -348,13 +307,11 @@ QRIterationResult eigenvalues_shifted(const Matrix& A, QRIterationOptions opts) 
 
         const double sigma = wilkinson_shift(sub_mat);
 
-        // Shift, factor, unshift.
         for (std::size_t i = 0; i < active; ++i) sub_mat(i, i) -= sigma;
         const QRResult qr = qr_householder(sub_mat);
         sub_mat = qr.R * qr.Q;
         for (std::size_t i = 0; i < active; ++i) sub_mat(i, i) += sigma;
 
-        // Copy back.
         for (std::size_t i = 0; i < active; ++i)
             for (std::size_t j = 0; j < active; ++j)
                 Ak(i, j) = sub_mat(i, j);
@@ -374,9 +331,7 @@ QRIterationResult eigenvalues_shifted(const Matrix& A, QRIterationOptions opts) 
     return result;
 }
 
-// ---------------------------------------------------------------------------
-// Stage 3a: Givens rotation
-// ---------------------------------------------------------------------------
+// --- Givens rotation ---
 
 GivensRotation GivensRotation::make(double x, double y, std::size_t row_index) {
     const double r = std::hypot(x, y);
@@ -409,10 +364,7 @@ void GivensRotation::apply_right(Matrix& M, std::size_t row_end) const {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Stage 3b: Hessenberg reduction
-// ---------------------------------------------------------------------------
-//
+// --- Hessenberg reduction ---
 // For k = 0, 1, ..., n-3:
 //   Build a Householder reflector H_k that zeros A[k+2:n, k].
 //   Apply from left:  A[k+1:n, k:n] ← H_k * A[k+1:n, k:n]
@@ -430,7 +382,6 @@ HessenbergResult hessenberg_reduction(const Matrix& A) {
     Matrix Q = Matrix::identity(n);
 
     for (std::size_t k = 0; k + 2 <= n; ++k) {
-        // Length of the sub-vector to be zeroed: rows k+1..n-1, column k.
         const std::size_t p = n - k - 1;  // p = n - (k+1)
         if (p == 0) break;
 
@@ -438,7 +389,6 @@ HessenbergResult hessenberg_reduction(const Matrix& A) {
         std::vector<double> u(p);
         for (std::size_t i = 0; i < p; ++i) u[i] = H(k + 1 + i, k);
 
-        // ||x|| and sigma = sign(u[0]) * ||x||.
         double x_norm = 0.0;
         for (double v : u) x_norm += v * v;
         x_norm = std::sqrt(x_norm);
@@ -476,16 +426,13 @@ HessenbergResult hessenberg_reduction(const Matrix& A) {
             for (std::size_t i = 0; i < p; ++i) Q(j, k + 1 + i) -= coeff * u[i];
         }
 
-        // Zero out the numerical noise below the subdiagonal explicitly.
         for (std::size_t i = 1; i < p; ++i) H(k + 1 + i, k) = 0.0;
     }
 
     return HessenbergResult{std::move(H), std::move(Q)};
 }
 
-// ---------------------------------------------------------------------------
-// Stage 3c: Hessenberg QR step via Givens rotations
-// ---------------------------------------------------------------------------
+// --- Hessenberg QR step via Givens rotations ---
 //
 // One shifted QR step on the upper Hessenberg matrix H:
 //   1. Shift: H ← H - σI.
@@ -497,15 +444,13 @@ HessenbergResult hessenberg_reduction(const Matrix& A) {
 //   4. Unshift: H ← H + σI.
 //
 // After the step H is again upper Hessenberg (GVL §7.4.2, Theorem 7.4.1).
-// Total cost: O(n²).  Ref: GVL §7.4.2; T&B Lecture 29.
+// Total cost: O(n²).  Ref: GVL §7.4.2.
 
 void hessenberg_qr_step(Matrix& H, double sigma) {
     const std::size_t n = H.rows();
 
-    // Shift.
     for (std::size_t j = 0; j < n; ++j) H(j, j) -= sigma;
 
-    // Accumulate Givens rotations; apply from left as we go.
     std::vector<GivensRotation> gs;
     gs.reserve(n - 1);
 
@@ -518,9 +463,6 @@ void hessenberg_qr_step(Matrix& H, double sigma) {
         gs.push_back(g);
     }
 
-    // Apply accumulated Givens from right (G_k^T on cols k, k+1).
-    // After all left applications H is upper triangular R; exploiting this,
-    // G_k^T only has nonzero effect on rows 0..k+1.
     for (std::size_t k = 0; k + 1 < n; ++k) {
         gs[k].apply_right(H, std::min(k + 2, n));
     }
@@ -529,9 +471,7 @@ void hessenberg_qr_step(Matrix& H, double sigma) {
     for (std::size_t j = 0; j < n; ++j) H(j, j) += sigma;
 }
 
-// ---------------------------------------------------------------------------
-// Stage 3d: Full practical QR algorithm
-// ---------------------------------------------------------------------------
+// --- Full QR algorithm ---
 //
 // Same outer deflation loop as eigenvalues_shifted, but each QR step uses
 // hessenberg_qr_step (O(n²) Givens rotations) instead of full Householder QR
@@ -560,11 +500,9 @@ QRIterationResult eigenvalues_hessenberg(const Matrix& A,
         return result;
     }
 
-    // One-time O(n³) Hessenberg reduction.
     HessenbergResult hr = hessenberg_reduction(A);
     Matrix& H = hr.H;
 
-    // Deflation bookkeeping — mirrors eigenvalues_shifted exactly.
     std::size_t n_found = n;
     std::size_t active  = n;
 
@@ -615,18 +553,15 @@ QRIterationResult eigenvalues_hessenberg(const Matrix& A,
         if (active == 2) { close_2x2();                       break; }
 
         // Wilkinson shift from trailing 2×2 of the active block.
-        // Inlined from wilkinson_shift() to avoid a temporary Matrix copy.
-        const double a_w   = H(active - 2, active - 2);
-        const double b_w   = H(active - 1, active - 2);
-        const double d_w   = H(active - 1, active - 1);
+        const double a_w = H(active - 2, active - 2);
+        const double b_w = H(active - 1, active - 2);
+        const double d_w = H(active - 1, active - 1);
         const double delta = 0.5 * (a_w - d_w);
         const double denom = std::abs(delta) + std::hypot(delta, b_w);
         const double sigma = (denom == 0.0) ? d_w
             : d_w - ((delta >= 0.0) ? 1.0 : -1.0) * (b_w * b_w) / denom;
 
         // O(n²) Givens step on the active×active Hessenberg subblock.
-        // Copy in, step, copy out — preserves entries for already-deflated
-        // eigenvalues stored in the lower-right corner of H.
         Matrix sub_H(active, active);
         for (std::size_t ii = 0; ii < active; ++ii)
             for (std::size_t jj = 0; jj < active; ++jj)
@@ -639,7 +574,6 @@ QRIterationResult eigenvalues_hessenberg(const Matrix& A,
                 H(ii, jj) = sub_H(ii, jj);
 
         if (opts.track_convergence) {
-            // Record the lower-triangle norm of the active subblock only.
             double s = 0.0;
             for (std::size_t ii = 1; ii < active; ++ii)
                 for (std::size_t jj = 0; jj < ii; ++jj)

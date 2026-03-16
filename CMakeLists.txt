@@ -64,7 +64,27 @@ if(LINEAR_ALGEBRA_BUILD_EXPERIMENTS)
 
     add_executable(matmul experiments/matmul.cpp)
     target_link_libraries(matmul PRIVATE linear_algebra::core)
-endif()
+
+#     find_package(BLAS)
+#     find_package(LAPACK)
+#     if(BLAS_FOUND AND LAPACK_FOUND)
+#         add_executable(blas_comparison experiments/blas_comparison.cpp)
+#         target_link_libraries(blas_comparison PRIVATE
+#             linear_algebra::core
+#             ${BLAS_LIBRARIES}
+#             ${LAPACK_LIBRARIES}
+#         )
+#         if(DEFINED BLAS_INCLUDE_DIRS)
+#             target_include_directories(blas_comparison PRIVATE ${BLAS_INCLUDE_DIRS})
+#         endif()
+#         if(APPLE)
+#             # Suppress deprecation warnings from Accelerate headers on recent macOS.
+#             target_compile_options(blas_comparison PRIVATE -Wno-deprecated-declarations)
+#         endif()
+#     else()
+#         message(STATUS "BLAS/LAPACK not found — skipping blas_comparison experiment")
+#     endif()
+# endif()
 
 if(LINEAR_ALGEBRA_BUILD_TESTS)
     include(FetchContent)

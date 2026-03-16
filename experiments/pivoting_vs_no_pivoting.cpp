@@ -16,14 +16,12 @@
 using linalg::Matrix;
 using linalg::Vector;
 
-// ---------------------------------------------------------------------------
-// Local no-pivot LU for comparison only.
-// ---------------------------------------------------------------------------
+// --- Local no-pivot LU for comparison only. ---
 
 struct NoPivotLU {
     Matrix L;
     Matrix U;
-    bool failed = false;   // true if a zero pivot was encountered
+    bool failed = false;   
     std::size_t fail_step = 0;
 };
 
@@ -59,9 +57,7 @@ std::optional<Vector> solve_no_pivot(const NoPivotLU& f, const Vector& b) {
     }
 }
 
-// ---------------------------------------------------------------------------
-// Metrics
-// ---------------------------------------------------------------------------
+// --- Metrics ---
 
 double solve_residual(const Matrix& A, const Vector& x, const Vector& b) {
     return linalg::norm2(A * x - b);
@@ -83,9 +79,7 @@ double reconstruction_error(const Matrix& A, const linalg::LUResult& lu) {
     return std::sqrt(err);
 }
 
-// ---------------------------------------------------------------------------
-// Reporting
-// ---------------------------------------------------------------------------
+// --- Reporting ---
 
 void print_header(const std::string& title) {
     std::cout << "\n" << std::string(60, '=') << "\n";
@@ -127,7 +121,6 @@ void report_no_pivot(const Matrix& A, const Vector& b) {
                   << "FAILED during solve (singular U)\n";
         return;
     }
-    // Compute reconstruction error without perm (no-pivot uses A directly).
     const Matrix LU_prod = f.L * f.U;
     double rec_err = 0.0;
     for (std::size_t i = 0; i < A.rows(); ++i)
@@ -150,11 +143,8 @@ void run_case(const std::string& label, const Matrix& A, const Vector& b) {
     report_no_pivot(A, b);
 }
 
-// ---------------------------------------------------------------------------
-// Experiment cases
-// ---------------------------------------------------------------------------
+// --- Experiment cases ---
 
-// 1. Random well-conditioned matrix
 void exp_random(std::size_t n = 8) {
     std::mt19937 rng(42);
     std::uniform_real_distribution<double> dist(-5.0, 5.0);
@@ -169,7 +159,6 @@ void exp_random(std::size_t n = 8) {
     run_case("Random 8x8 (well-conditioned)", A, b);
 }
 
-// 2. Badly row-scaled matrix
 void exp_badly_scaled() {
     const Matrix A{
         {1e-14, 1.0,   2.0  },
@@ -180,7 +169,6 @@ void exp_badly_scaled() {
     run_case("Badly scaled (row norms differ by 10^14)", A, b);
 }
 
-// 3. Classic pathological example for no-pivot LU.
 void exp_epsilon_pathology() {
     constexpr double eps = 1e-15;
     const Matrix A{{eps, 1.0}, {1.0, 2.0}};
@@ -189,7 +177,6 @@ void exp_epsilon_pathology() {
     std::cout << "  Note: exact solution is x = [1, 1]\n";
 }
 
-// 4. Matrix where no-pivot LU diverges visibly on a 4x4 example.
 void exp_amplified_multiplier() {
     const Matrix A{
         {0.001, 1.0,   0.0,   0.0  },
@@ -202,7 +189,6 @@ void exp_amplified_multiplier() {
     std::cout << "  Note: exact solution is x = [1, 2, 3, 4]\n";
 }
 
-// 5. Matrix requiring multiple row swaps (permutation is non-trivial).
 void exp_permutation() {
     const Matrix A{
         {0.0, 0.0, 3.0},
@@ -213,9 +199,6 @@ void exp_permutation() {
     run_case("Multiple row swaps required (zeros in pivot positions)", A, b);
 }
 
-// ---------------------------------------------------------------------------
-// main
-// ---------------------------------------------------------------------------
 
 int main() {
     std::cout << std::string(60, '*') << "\n";

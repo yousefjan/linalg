@@ -49,12 +49,8 @@ Matrix naive_matmul(const Matrix& lhs, const Matrix& rhs) {
     return result;
 }
 
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
+// --- Helpers ---
 
-// Fill an n×n matrix with a deterministic pattern so the compiler cannot
-// optimise multiplications away.
 Matrix make_matrix(std::size_t n) {
     Matrix M(n, n);
     const double inv = 1.0 / static_cast<double>(n + 1);
@@ -98,7 +94,6 @@ int main() {
     std::cout << "  C = A * B,  A and B both n×n\n";
     std::cout << std::string(72, '*') << "\n\n";
 
-    // Column header.
     std::cout << std::left
               << std::setw(6)  << "n"
               << std::setw(14) << "naive ms"
@@ -121,12 +116,12 @@ int main() {
         (void)sink_simd;
 
         const double t_naive = min_time_s([&] { (void)naive_matmul(A, B); }, trials);
-        const double t_simd  = min_time_s([&] { (void)(A * B); },           trials);
+        const double t_simd = min_time_s([&] { (void)(A * B); }, trials);
 
-        const double fp       = flops(n);
+        const double fp = flops(n);
         const double gf_naive = fp / t_naive / 1e9;
-        const double gf_simd  = fp / t_simd  / 1e9;
-        const double speedup  = t_naive / t_simd;
+        const double gf_simd = fp / t_simd / 1e9;
+        const double speedup = t_naive / t_simd;
 
         std::cout << std::left  << std::setw(6) << n
                   << std::fixed << std::setprecision(3)
