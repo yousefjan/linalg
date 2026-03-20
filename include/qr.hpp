@@ -5,12 +5,6 @@
 
 namespace linalg {
 
-// Thin QR factorization result.
-//
-// For an m x n matrix A with m >= n:
-//   Q  is m x n with orthonormal columns  (Q^T Q = I_n)
-//   R  is n x n upper triangular
-//   A  = Q * R
 struct QRResult {
     Matrix Q;
     Matrix R;
