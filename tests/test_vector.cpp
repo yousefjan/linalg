@@ -1,6 +1,4 @@
-#include "linalg_error.hpp"
-#include "norms.hpp"
-#include "vector.hpp"
+import linalgebra;
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
@@ -8,8 +6,8 @@
 #include <type_traits>
 #include <utility>
 
-using linalg::DimensionMismatchError;
-using linalg::Vector;
+using linalgebra::DimensionMismatchError;
+using linalgebra::Vector;
 
 TEST_CASE("Vector constructors initialize size and values", "[vector]") {
     const Vector empty;
@@ -82,17 +80,17 @@ TEST_CASE("Vector arithmetic enforces shape compatibility", "[vector]") {
     CHECK(scaled[1] == 1.0);
     CHECK(scaled[2] == 1.5);
 
-    CHECK(linalg::dot(a, b) == 32.0);
+    CHECK(linalgebra::dot(a, b) == 32.0);
 
     const Vector short_vec{1.0, 2.0};
     CHECK_THROWS_AS(a + short_vec, DimensionMismatchError);
-    CHECK_THROWS_AS(linalg::dot(a, short_vec), DimensionMismatchError);
+    CHECK_THROWS_AS(linalgebra::dot(a, short_vec), DimensionMismatchError);
 }
 
 TEST_CASE("Vector 2-norm matches manually computed values", "[vector][norms]") {
     const Vector v{3.0, 4.0};
-    CHECK(linalg::norm2(v) == Catch::Approx(5.0));
+    CHECK(linalgebra::norm2(v) == Catch::Approx(5.0));
 
     const Vector zero(5);
-    CHECK(linalg::norm2(zero) == Catch::Approx(0.0));
+    CHECK(linalgebra::norm2(zero) == Catch::Approx(0.0));
 }

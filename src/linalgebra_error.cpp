@@ -1,9 +1,7 @@
-#pragma once
+export module linalgebra:error;
+import std;
 
-#include <stdexcept>
-#include <string>
-
-namespace linalg {
+export namespace linalgebra {
 
 class LinAlgError : public std::runtime_error {
 public:
@@ -28,4 +26,4 @@ public:
         : LinAlgError(message) {}
 };
 
-}  // namespace linalg
+}  // namespace linalgebra

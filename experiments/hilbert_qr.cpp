@@ -1,20 +1,8 @@
-#include "matrix.hpp"
-#include "qr.hpp"
+import linalgebra;
+import std;
 
-#include <chrono>
-#include <cmath>
-#include <cstddef>
-#include <functional>
-#include <iomanip>
-#include <iostream>
-#include <optional>
-#include <stdexcept>
-#include <string>
-
-using linalg::Matrix;
-using linalg::QRResult;
-
-// --- Matrix construction ---
+using linalgebra::Matrix;
+using linalgebra::QRResult;
 
 Matrix hilbert(std::size_t n) {
     Matrix H(n, n);
@@ -23,8 +11,6 @@ Matrix hilbert(std::size_t n) {
             H(i, j) = 1.0 / static_cast<double>(i + j + 1);
     return H;
 }
-
-// --- Metrics ---
 
 double reconstruction_error(const Matrix& A, const QRResult& qr) {
     const std::size_t m = A.rows();
@@ -52,7 +38,6 @@ double orthogonality_error(const QRResult& qr) {
         }
     return std::sqrt(err);
 }
-
 
 using Clock = std::chrono::high_resolution_clock;
 using Seconds = std::chrono::duration<double>;
@@ -98,7 +83,6 @@ void print_row(const std::string& method, std::optional<Result> r) {
               << std::setw(10) << r->time_s * 1e6 << " µs\n";
 }
 
-
 int main() {
     std::cout << std::string(70, '*') << "\n";
     std::cout << "  Hilbert QR Experiment: comparing GS variants and Householder\n";
@@ -124,11 +108,11 @@ int main() {
         std::cout << std::string(70, ' ') << "\n";
 
         print_row("classical_gs",
-            measure(H, [](const Matrix& A) { return linalg::qr_classical_gs(A); }));
+            measure(H, [](const Matrix& A) { return linalgebra::qr_classical_gs(A); }));
         print_row("modified_gs",
-            measure(H, [](const Matrix& A) { return linalg::qr_modified_gs(A); }));
+            measure(H, [](const Matrix& A) { return linalgebra::qr_modified_gs(A); }));
         print_row("householder",
-            measure(H, [](const Matrix& A) { return linalg::qr_householder(A); }));
+            measure(H, [](const Matrix& A) { return linalgebra::qr_householder(A); }));
     }
 
     return 0;

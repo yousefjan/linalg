@@ -1,27 +1,13 @@
-#include "lu.hpp"
-#include "matrix.hpp"
-#include "norms.hpp"
-#include "triangular_solve.hpp"
-#include "vector.hpp"
+import linalgebra;
+import std;
 
-#include <cmath>
-#include <cstddef>
-#include <iomanip>
-#include <iostream>
-#include <optional>
-#include <random>
-#include <string>
-#include <vector>
-
-using linalg::Matrix;
-using linalg::Vector;
-
-// --- Local no-pivot LU for comparison only. ---
+using linalgebra::Matrix;
+using linalgebra::Vector;
 
 struct NoPivotLU {
     Matrix L;
     Matrix U;
-    bool failed = false;   
+    bool failed = false;
     std::size_t fail_step = 0;
 };
 
@@ -50,20 +36,18 @@ NoPivotLU lu_no_pivot(const Matrix& A, double tol = 1e-14) {
 std::optional<Vector> solve_no_pivot(const NoPivotLU& f, const Vector& b) {
     if (f.failed) return std::nullopt;
     try {
-        const Vector y = linalg::forward_substitution(f.L, b, 1e-14, /*unit_diagonal=*/true);
-        return linalg::backward_substitution(f.U, y);
+        const Vector y = linalgebra::forward_substitution(f.L, b, 1e-14, /*unit_diagonal=*/true);
+        return linalgebra::backward_substitution(f.U, y);
     } catch (...) {
         return std::nullopt;
     }
 }
 
-// --- Metrics ---
-
 double solve_residual(const Matrix& A, const Vector& x, const Vector& b) {
-    return linalg::norm2(A * x - b);
+    return linalgebra::norm2(A * x - b);
 }
 
-double reconstruction_error(const Matrix& A, const linalg::LUResult& lu) {
+double reconstruction_error(const Matrix& A, const linalgebra::LUResult& lu) {
     const std::size_t n = A.rows();
     Matrix PA(n, n);
     for (std::size_t i = 0; i < n; ++i)
@@ -79,8 +63,6 @@ double reconstruction_error(const Matrix& A, const linalg::LUResult& lu) {
     return std::sqrt(err);
 }
 
-// --- Reporting ---
-
 void print_header(const std::string& title) {
     std::cout << "\n" << std::string(60, '=') << "\n";
     std::cout << "  " << title << "\n";
@@ -95,8 +77,8 @@ void print_header(const std::string& title) {
 
 void report_pivoted(const Matrix& A, const Vector& b) {
     try {
-        const linalg::LUResult lu = linalg::lu_factor(A);
-        const Vector x = linalg::lu_solve(lu, b);
+        const linalgebra::LUResult lu = linalgebra::lu_factor(A);
+        const Vector x = linalgebra::lu_solve(lu, b);
         std::cout << std::left << std::setw(22) << "Pivoted LU"
                   << std::setw(20) << std::scientific << std::setprecision(3)
                   << solve_residual(A, x, b)
@@ -143,8 +125,6 @@ void run_case(const std::string& label, const Matrix& A, const Vector& b) {
     report_no_pivot(A, b);
 }
 
-// --- Experiment cases ---
-
 void exp_random(std::size_t n = 8) {
     std::mt19937 rng(42);
     std::uniform_real_distribution<double> dist(-5.0, 5.0);
@@ -165,7 +145,7 @@ void exp_badly_scaled() {
         {1.0,   3.0,   4.0  },
         {2.0,   5.0,   7.0  }
     };
-    const Vector b{1e-14 + 3.0, 8.0, 14.0};  // b = A * [1, 1, 1]
+    const Vector b{1e-14 + 3.0, 8.0, 14.0};
     run_case("Badly scaled (row norms differ by 10^14)", A, b);
 }
 
@@ -198,7 +178,6 @@ void exp_permutation() {
     const Vector b = A * Vector{1.0, -1.0, 2.0};
     run_case("Multiple row swaps required (zeros in pivot positions)", A, b);
 }
-
 
 int main() {
     std::cout << std::string(60, '*') << "\n";

@@ -1,23 +1,48 @@
-# Numerical Linear Algebra
-
-This repo contains a small C++ dense numerical linear algebra library for `double`, with a companion experiments directory for evaluating performance.
-I mostly follow Trefethen & Bau, "Numerical Linear Algebra" and Golub & Van Loan, "Matrix Computations" 
-The implementation supports compile-time SIMD backends for `AVX`, `AVX2`, `AVX512`, and `NEON` on `AArch64`/`ARM64` with FP64 vector support.
+This is a small C++ dense numerical linear algebra library, with a companion experiments directory 
+for evaluating performance.
+I mostly follow Trefethen & Bau, "Numerical Linear Algebra" and Golub & Van Loan, "Matrix 
+Computations."
+The implementation uses `NEON` SIMD on ARM64 systems when available.
 
 ## Build
 
+The library is packaged as a C++20 named module (`linalgebra`): 
+
+- CMake 4.1.x
+- Ninja
+- LLVM Clang ≥ 18 with libc++ (Homebrew LLVM 22 is what's tested; AppleClang
+  doesn't yet support module dependency scanning)
+
 ```bash
-cmake -S . -B build
+cmake -S . -B build -G Ninja \
+  -DCMAKE_CXX_COMPILER=/opt/homebrew/opt/llvm/bin/clang++
 cmake --build build
 ```
 
-On x86, you can explicitly choose a matmul SIMD target at configure time:
+You can explicitly disable SIMD at configure time with:
 
 ```bash
-cmake -S . -B build -DLINEAR_ALGEBRA_SIMD=AVX2
+cmake -S . -B build -G Ninja \
+  -DCMAKE_CXX_COMPILER=/opt/homebrew/opt/llvm/bin/clang++ \
+  -DLINEAR_ALGEBRA_SIMD=NONE
 ```
 
-Valid values are `AUTO`, `NONE`, `AVX`, `AVX2`, and `AVX512`. `AUTO` uses the compiler's current target. `NONE` forces the scalar fallback.
+Valid values are `AUTO` (uses available SIMD) and `NONE` (forces scalar fallback).
+
+## Usage
+
+Import the module:
+
+```cpp
+import linalgebra;
+
+int main() {
+    linalgebra::Matrix A{{1.0, 2.0}, {3.0, 4.0}};
+    linalgebra::Vector b{5.0, 6.0};
+    auto lu = linalgebra::lu_factor(A);
+    auto x  = linalgebra::lu_solve(lu, b);
+}
+```
 
 ## Run tests
 
@@ -30,13 +55,15 @@ ctest --test-dir build --output-on-failure
 - Matrix / Vector core with SIMD matmul
 - Triangular solvers (forward / backward substitution)
 - LU factorization with partial pivoting (`lu_factor`, `lu_solve`)
-- QR factorization — classical GS, modified GS, and Householder (`qr_classical_gs`, `qr_modified_gs`, `qr_householder`)
+- QR factorization — classical GS, modified GS, and Householder (`qr_classical_gs`, 
+  `qr_modified_gs`, `qr_householder`)
 - Eigenvalue computation via QR iteration:
   - Unshifted QR (`eigenvalues_unshifted`) — linear convergence, T&B Algorithm 28.1
   - Wilkinson-shifted QR (`eigenvalues_shifted`) — typically cubic convergence, T&B Lecture 29
-  - Hessenberg + Givens QR (`eigenvalues_hessenberg`) — O(n²) per step after one O(n³) reduction; ~10–30× faster than `eigenvalues_shifted` for n ≥ 50
+  - Hessenberg + Givens QR (`eigenvalues_hessenberg`) — O(n²) per step after one O(n³) reduction; 
+    ~10–30× faster than `eigenvalues_shifted` for n ≥ 50
 
-TODO:
+## TODO:
 - [ ] Cholesky factorization (cholesky) — for symmetric positive definite systems
 - [ ] Rank-revealing QR — Householder QR with column pivoting (qr_colpiv)
 - [ ] Symmetric tridiagonalization — Householder reduction before symmetric QR (tridiagonalize)

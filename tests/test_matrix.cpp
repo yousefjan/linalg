@@ -1,15 +1,11 @@
-#include "linalg_error.hpp"
-#include "matrix.hpp"
+import linalgebra;
 
 #include <catch2/catch_approx.hpp>
 #include <catch2/catch_test_macros.hpp>
 
-#include <type_traits>
-#include <utility>
-
-using linalg::Matrix;
-using linalg::Vector;
-using linalg::DimensionMismatchError;
+using linalgebra::Matrix;
+using linalgebra::Vector;
+using linalgebra::DimensionMismatchError;
 
 TEST_CASE("Matrix constructors initialize dimensions and values", "[matrix]") {
     const Matrix empty;
@@ -101,7 +97,7 @@ TEST_CASE("Matrix initializer list rejects unequal row lengths", "[matrix]") {
 
 TEST_CASE("Matrix transpose swaps rows and columns", "[matrix]") {
     const Matrix a{{1.0, 2.0, 3.0}, {4.0, 5.0, 6.0}};
-    const Matrix at = linalg::transpose(a);
+    const Matrix at = linalgebra::transpose(a);
 
     REQUIRE(at.rows() == 3);
     REQUIRE(at.cols() == 2);

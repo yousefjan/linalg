@@ -1,9 +1,15 @@
-#include "norms.hpp"
+export module linalgebra:norms;
+import std;
+import :vector;
 
-#include <cmath>
+export namespace linalgebra {
 
-namespace linalg {
+double norm2(const Vector& vector);
+
+}  // namespace linalgebra
+
+namespace linalgebra {
 
 double norm2(const Vector& vector) { return std::sqrt(dot(vector, vector)); }
 
-}  // namespace linalg
+}  // namespace linalgebra

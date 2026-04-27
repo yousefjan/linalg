@@ -1,28 +1,41 @@
-#include "triangular_solve.hpp"
+export module linalgebra:triangular_solve;
+import std;
+import :error;
+import :vector;
+import :matrix;
 
-#include "linalg_error.hpp"
+export namespace linalgebra {
 
-#include <cmath>
-#include <sstream>
-#include <stdexcept>
+Vector forward_substitution(
+    const Matrix& lower,
+    const Vector& rhs,
+    double singular_tolerance = 1e-12,
+    bool unit_diagonal = false);
 
-namespace linalg {
+Vector backward_substitution(
+    const Matrix& upper,
+    const Vector& rhs,
+    double singular_tolerance = 1e-12,
+    bool unit_diagonal = false);
+
+}  // namespace linalgebra
 
 namespace {
 
-void validate_square_system(const Matrix& matrix, const Vector& rhs, const char* operation) {
+void validate_square_system(const linalgebra::Matrix& matrix, const linalgebra::Vector& rhs,
+                             const char* operation) {
     if (matrix.rows() != matrix.cols()) {
         std::ostringstream oss;
         oss << operation << " requires a square matrix, got " << matrix.rows() << "x"
             << matrix.cols();
-        throw DimensionMismatchError(oss.str());
+        throw linalgebra::DimensionMismatchError(oss.str());
     }
 
     if (matrix.rows() != rhs.size()) {
         std::ostringstream oss;
         oss << operation << " requires matrix dimension to match rhs size, got "
             << matrix.rows() << " and " << rhs.size();
-        throw DimensionMismatchError(oss.str());
+        throw linalgebra::DimensionMismatchError(oss.str());
     }
 }
 
@@ -32,10 +45,8 @@ void validate_tolerance(double singular_tolerance) {
     }
 }
 
-void validate_lower_triangular(
-    const Matrix& lower,
-    double singular_tolerance,
-    bool unit_diagonal) {
+void validate_lower_triangular(const linalgebra::Matrix& lower, double singular_tolerance,
+                                bool unit_diagonal) {
     for (std::size_t i = 0; i < lower.rows(); ++i) {
         for (std::size_t j = i + 1; j < lower.cols(); ++j) {
             if (std::abs(lower(i, j)) > singular_tolerance) {
@@ -45,16 +56,14 @@ void validate_lower_triangular(
         }
 
         if (!unit_diagonal && std::abs(lower(i, i)) <= singular_tolerance) {
-            throw SingularMatrixError(
+            throw linalgebra::SingularMatrixError(
                 "Forward substitution encountered a zero or tiny diagonal entry");
         }
     }
 }
 
-void validate_upper_triangular(
-    const Matrix& upper,
-    double singular_tolerance,
-    bool unit_diagonal) {
+void validate_upper_triangular(const linalgebra::Matrix& upper, double singular_tolerance,
+                                bool unit_diagonal) {
     for (std::size_t i = 0; i < upper.rows(); ++i) {
         for (std::size_t j = 0; j < i; ++j) {
             if (std::abs(upper(i, j)) > singular_tolerance) {
@@ -64,7 +73,7 @@ void validate_upper_triangular(
         }
 
         if (!unit_diagonal && std::abs(upper(i, i)) <= singular_tolerance) {
-            throw SingularMatrixError(
+            throw linalgebra::SingularMatrixError(
                 "Backward substitution encountered a negligible diagonal entry");
         }
     }
@@ -72,11 +81,10 @@ void validate_upper_triangular(
 
 }  // namespace
 
-Vector forward_substitution(
-    const Matrix& lower,
-    const Vector& rhs,
-    double singular_tolerance,
-    bool unit_diagonal) {
+namespace linalgebra {
+
+Vector forward_substitution(const Matrix& lower, const Vector& rhs,
+                             double singular_tolerance, bool unit_diagonal) {
     validate_tolerance(singular_tolerance);
     validate_square_system(lower, rhs, "Forward substitution");
     validate_lower_triangular(lower, singular_tolerance, unit_diagonal);
@@ -98,11 +106,8 @@ Vector forward_substitution(
     return solution;
 }
 
-Vector backward_substitution(
-    const Matrix& upper,
-    const Vector& rhs,
-    double singular_tolerance,
-    bool unit_diagonal) {
+Vector backward_substitution(const Matrix& upper, const Vector& rhs,
+                              double singular_tolerance, bool unit_diagonal) {
     validate_tolerance(singular_tolerance);
     validate_square_system(upper, rhs, "Backward substitution");
     validate_upper_triangular(upper, singular_tolerance, unit_diagonal);
@@ -125,4 +130,4 @@ Vector backward_substitution(
     return solution;
 }
 
-}  // namespace linalg
+}  // namespace linalgebra

@@ -1,25 +1,64 @@
-#include "vector.hpp"
-#include "linalg_error.hpp"
+export module linalgebra:vector;
+import std;
+import :error;
 
-#include <algorithm>
-#include <numeric>
-#include <sstream>
-#include <stdexcept>
+export namespace linalgebra {
 
-namespace linalg {
+class Vector {
+public:
+    Vector() = default;
+    explicit Vector(std::size_t n);
+    Vector(std::size_t n, double value);
+    Vector(std::initializer_list<double> values);
+
+    [[nodiscard]] std::size_t size() const noexcept;
+    [[nodiscard]] bool empty() const noexcept;
+
+    double& operator[](std::size_t i);
+    const double& operator[](std::size_t i) const;
+
+    void fill(double value);
+
+    double* data() noexcept;
+    const double* data() const noexcept;
+
+    auto begin() noexcept { return data_.begin(); }
+    auto end() noexcept { return data_.end(); }
+    auto begin() const noexcept { return data_.begin(); }
+    auto end() const noexcept { return data_.end(); }
+    auto cbegin() const noexcept { return data_.cbegin(); }
+    auto cend() const noexcept { return data_.cend(); }
+
+private:
+    void check_index(std::size_t i) const;
+
+    std::vector<double> data_;
+};
+
+Vector operator+(const Vector& lhs, const Vector& rhs);
+Vector operator-(const Vector& lhs, const Vector& rhs);
+Vector operator*(const Vector& v, double scalar);
+Vector operator*(double scalar, const Vector& v);
+Vector operator/(const Vector& v, double scalar);
+double dot(const Vector& lhs, const Vector& rhs);
+
+}  // namespace linalgebra
 
 namespace {
 
-void check_same_size(const Vector& lhs, const Vector& rhs, const char* operation) {
+void check_same_size(const linalgebra::Vector& lhs, const linalgebra::Vector& rhs,
+                     const char* operation) {
     if (lhs.size() != rhs.size()) {
         std::ostringstream oss;
         oss << operation << " requires equal vector sizes, got " << lhs.size() << " and "
             << rhs.size();
-        throw DimensionMismatchError(oss.str());
+        throw linalgebra::DimensionMismatchError(oss.str());
     }
 }
 
 }  // namespace
+
+namespace linalgebra {
 
 Vector::Vector(std::size_t n) : data_(n) {}
 
@@ -101,4 +140,4 @@ double dot(const Vector& lhs, const Vector& rhs) {
     return std::inner_product(lhs.begin(), lhs.end(), rhs.begin(), 0.0);
 }
 
-}  // namespace linalg
+}  // namespace linalgebra

@@ -1,14 +1,26 @@
-#include "lu.hpp"
+export module linalgebra:lu;
+import std;
+import :error;
+import :vector;
+import :matrix;
+import :triangular_solve;
 
-#include <algorithm>
-#include <cmath>
-#include <numeric>
-#include <sstream>
+export namespace linalgebra {
 
-#include "linalg_error.hpp"
-#include "triangular_solve.hpp"
+struct LUResult {
+    Matrix L;
+    Matrix U;
+    std::vector<std::size_t> perm;
+    int sign;
+};
 
-namespace linalg {
+LUResult lu_factor(const Matrix& A, double singular_tolerance = 1e-12);
+
+Vector lu_solve(const LUResult& lu, const Vector& b);
+
+}  // namespace linalgebra
+
+namespace linalgebra {
 
 LUResult lu_factor(const Matrix& A, double singular_tolerance) {
     if (A.rows() != A.cols()) {
@@ -33,7 +45,6 @@ LUResult lu_factor(const Matrix& A, double singular_tolerance) {
     int sign = 1;
 
     for (std::size_t k = 0; k < n; ++k) {
-        // ---- Partial pivoting: find row with largest magnitude in column k ----
         std::size_t pivot_row = k;
         double max_val = std::abs(work(k, k));
         for (std::size_t i = k + 1; i < n; ++i) {
@@ -55,7 +66,6 @@ LUResult lu_factor(const Matrix& A, double singular_tolerance) {
             sign = -sign;
         }
 
-        // ---- Singularity check ----
         if (std::abs(work(k, k)) <= singular_tolerance) {
             std::ostringstream oss;
             oss << "lu_factor: near-zero pivot " << work(k, k) << " at step " << k
@@ -63,12 +73,10 @@ LUResult lu_factor(const Matrix& A, double singular_tolerance) {
             throw SingularMatrixError(oss.str());
         }
 
-        // ---- Record U row k ----
         for (std::size_t j = k; j < n; ++j) {
             U(k, j) = work(k, j);
         }
 
-        // ---- Compute multipliers and eliminate below pivot ----
         for (std::size_t i = k + 1; i < n; ++i) {
             L(i, k) = work(i, k) / work(k, k);
             for (std::size_t j = k + 1; j < n; ++j) {
@@ -101,4 +109,4 @@ Vector lu_solve(const LUResult& lu, const Vector& b) {
     return backward_substitution(lu.U, y);
 }
 
-}  // namespace linalg
+}  // namespace linalgebra

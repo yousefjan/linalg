@@ -1,19 +1,7 @@
-#include "linalg_error.hpp"
-#include "matrix.hpp"
+import linalgebra;
+import std;
 
-#include <chrono>
-#include <cstddef>
-#include <iomanip>
-#include <iostream>
-#include <vector>
-
-#if !defined(LINEAR_ALGEBRA_FORCE_SCALAR_MATMUL) && defined(__AVX512F__)
-#   define MATMUL_BACKEND "AVX512"
-#elif !defined(LINEAR_ALGEBRA_FORCE_SCALAR_MATMUL) && defined(__AVX2__)
-#   define MATMUL_BACKEND "AVX2"
-#elif !defined(LINEAR_ALGEBRA_FORCE_SCALAR_MATMUL) && defined(__AVX__)
-#   define MATMUL_BACKEND "AVX"
-#elif !defined(LINEAR_ALGEBRA_FORCE_SCALAR_MATMUL) && \
+#if !defined(LINEAR_ALGEBRA_FORCE_SCALAR_MATMUL) && \
       defined(__ARM_NEON) && defined(__aarch64__) && \
       defined(__ARM_FEATURE_FP64_VECTOR_ARITHMETIC)
 #   define MATMUL_BACKEND "NEON"
@@ -21,14 +9,14 @@
 #   define MATMUL_BACKEND "scalar"
 #endif
 
-using linalg::Matrix;
+using linalgebra::Matrix;
 using Clock   = std::chrono::high_resolution_clock;
 using Seconds = std::chrono::duration<double>;
 
 
 Matrix naive_matmul(const Matrix& lhs, const Matrix& rhs) {
     if (lhs.cols() != rhs.rows()) {
-        throw linalg::DimensionMismatchError(
+        throw linalgebra::DimensionMismatchError(
             "naive_matmul: lhs.cols() != rhs.rows()");
     }
     const std::size_t m = lhs.rows();
@@ -48,8 +36,6 @@ Matrix naive_matmul(const Matrix& lhs, const Matrix& rhs) {
 
     return result;
 }
-
-// --- Helpers ---
 
 Matrix make_matrix(std::size_t n) {
     Matrix M(n, n);

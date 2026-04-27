@@ -1,45 +1,49 @@
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.30)
+
+set(CMAKE_EXPERIMENTAL_CXX_IMPORT_STD "d0edc3af-4c50-42ea-a356-e2862fe7a444")
+
+if(APPLE AND CMAKE_CXX_COMPILER MATCHES "/opt/homebrew/.*/llvm/")
+    set(CMAKE_CXX_COMPILER_ID_ARG1 "-B/opt/homebrew/opt/llvm/lib/c++/")
+    set(CMAKE_CXX_FLAGS_INIT "-B/opt/homebrew/opt/llvm/lib/c++/")
+endif()
 
 project(linear_algebra_cpp VERSION 0.1.0 LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_CXX_EXTENSIONS ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-option(LINEAR_ALGEBRA_BUILD_TESTS "Build unit tests" ON)
-set(LINEAR_ALGEBRA_SIMD "AUTO" CACHE STRING "SIMD backend for matmul: AUTO, NONE, AVX, AVX2, AVX512")
-set_property(CACHE LINEAR_ALGEBRA_SIMD PROPERTY STRINGS AUTO NONE AVX AVX2 AVX512)
+set(CMAKE_CXX_MODULE_STD ON)
 
-add_library(linear_algebra
-    src/vector.cpp
-    src/matrix.cpp
-    src/norms.cpp
-    src/triangular_solve.cpp
-    src/lu.cpp
-    src/qr.cpp
-    src/qr_iteration.cpp
-)
+option(LINEAR_ALGEBRA_BUILD_TESTS "Build unit tests" ON)
+set(LINEAR_ALGEBRA_SIMD "AUTO" CACHE STRING "SIMD backend for matmul: AUTO (uses NEON on ARM, scalar otherwise), or NONE")
+set_property(CACHE LINEAR_ALGEBRA_SIMD PROPERTY STRINGS AUTO NONE)
+
+add_library(linear_algebra)
 
 add_library(linear_algebra::core ALIAS linear_algebra)
 
-target_include_directories(linear_algebra
+target_sources(linear_algebra
     PUBLIC
-        ${PROJECT_SOURCE_DIR}/include
+    FILE_SET CXX_MODULES FILES
+        src/linalgebra.cpp
+        src/linalgebra_error.cpp
+        src/vector.cpp
+        src/matrix.cpp
+        src/norms.cpp
+        src/triangular_solve.cpp
+        src/lu.cpp
+        src/qr.cpp
+        src/qr_iteration.cpp
 )
 
-target_compile_features(linear_algebra PUBLIC cxx_std_20)
+target_compile_features(linear_algebra PUBLIC cxx_std_23)
 
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang|GNU")
     target_compile_options(linear_algebra PRIVATE -Wall -Wextra -Wpedantic -Wconversion)
 
-    if(LINEAR_ALGEBRA_SIMD STREQUAL "AVX")
-        target_compile_options(linear_algebra PRIVATE -mavx)
-    elseif(LINEAR_ALGEBRA_SIMD STREQUAL "AVX2")
-        target_compile_options(linear_algebra PRIVATE -mavx2)
-    elseif(LINEAR_ALGEBRA_SIMD STREQUAL "AVX512")
-        target_compile_options(linear_algebra PRIVATE -mavx512f)
-    elseif(LINEAR_ALGEBRA_SIMD STREQUAL "NONE")
+    if(LINEAR_ALGEBRA_SIMD STREQUAL "NONE")
         target_compile_definitions(linear_algebra PRIVATE LINEAR_ALGEBRA_FORCE_SCALAR_MATMUL=1)
     elseif(LINEAR_ALGEBRA_SIMD STREQUAL "AUTO")
     else()
@@ -50,7 +54,7 @@ elseif(MSVC)
     if(LINEAR_ALGEBRA_SIMD STREQUAL "NONE")
         target_compile_definitions(linear_algebra PRIVATE LINEAR_ALGEBRA_FORCE_SCALAR_MATMUL=1)
     elseif(NOT LINEAR_ALGEBRA_SIMD STREQUAL "AUTO")
-        message(WARNING "LINEAR_ALGEBRA_SIMD explicit x86 flags are only wired for Clang/GNU right now.")
+        message(FATAL_ERROR "Unsupported LINEAR_ALGEBRA_SIMD value: ${LINEAR_ALGEBRA_SIMD}")
     endif()
 endif()
 
@@ -64,33 +68,10 @@ if(LINEAR_ALGEBRA_BUILD_EXPERIMENTS)
 
     add_executable(matmul experiments/matmul.cpp)
     target_link_libraries(matmul PRIVATE linear_algebra::core)
-
-#     find_package(BLAS)
-#     find_package(LAPACK)
-#     if(BLAS_FOUND AND LAPACK_FOUND)
-#         add_executable(blas_comparison experiments/blas_comparison.cpp)
-#         target_link_libraries(blas_comparison PRIVATE
-#             linear_algebra::core
-#             ${BLAS_LIBRARIES}
-#             ${LAPACK_LIBRARIES}
-#         )
-#         if(DEFINED BLAS_INCLUDE_DIRS)
-#             target_include_directories(blas_comparison PRIVATE ${BLAS_INCLUDE_DIRS})
-#         endif()
-#         if(APPLE)
-#             # Suppress deprecation warnings from Accelerate headers on recent macOS.
-#             target_compile_options(blas_comparison PRIVATE -Wno-deprecated-declarations)
-#         endif()
-#     else()
-#         message(STATUS "BLAS/LAPACK not found — skipping blas_comparison experiment")
-#     endif()
-# endif()
-
-if(LINEAR_ALGEBRA_BUILD_TESTS)
-    include(FetchContent)
 endif()
 
 if(LINEAR_ALGEBRA_BUILD_TESTS)
+    include(FetchContent)
 
     FetchContent_Declare(
         Catch2
