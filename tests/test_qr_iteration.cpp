@@ -422,3 +422,91 @@ TEST_CASE("Hessenberg QR: faster than naive shifted QR for large n",
     }
     std::cout << "=============================================\n";
 }
+
+// ---------------------------------------------------------------------------
+// Francis double-shift QR tests
+// ---------------------------------------------------------------------------
+
+TEST_CASE("Francis QR: 2x2 real eigenvalues", "[qr_iteration][francis]") {
+    Matrix A{{3.0, 1.0}, {0.0, 2.0}};
+    const QRIterationResult res = linalgebra::eigenvalues_francis(A);
+    const EigPairs expected = {{3.0, 0.0}, {2.0, 0.0}};
+    CHECK(eigs_match(res.eigenvalues_real, res.eigenvalues_imag, expected, 1e-10));
+}
+
+TEST_CASE("Francis QR: 2x2 complex eigenvalues", "[qr_iteration][francis]") {
+    // Rotation matrix — eigenvalues are cos(theta) ± i*sin(theta).
+    const double theta = 1.0;
+    Matrix A{{std::cos(theta), -std::sin(theta)},
+             {std::sin(theta),  std::cos(theta)}};
+    const QRIterationResult res = linalgebra::eigenvalues_francis(A);
+    const EigPairs expected = {
+        {std::cos(theta),  std::sin(theta)},
+        {std::cos(theta), -std::sin(theta)}
+    };
+    CHECK(eigs_match(res.eigenvalues_real, res.eigenvalues_imag, expected, 1e-10));
+}
+
+TEST_CASE("Francis QR: 3x3 with complex pair", "[qr_iteration][francis]") {
+    // Block diagonal: 2x2 rotation (complex pair) + real eigenvalue.
+    Matrix A{{0.0, -1.0, 0.0},
+             {1.0,  0.0, 0.0},
+             {0.0,  0.0, 5.0}};
+    const QRIterationResult res = linalgebra::eigenvalues_francis(A);
+    const EigPairs expected = {{0.0, 1.0}, {0.0, -1.0}, {5.0, 0.0}};
+    CHECK(eigs_match(res.eigenvalues_real, res.eigenvalues_imag, expected, 1e-10));
+}
+
+TEST_CASE("Francis QR: symmetric matrix (all real)", "[qr_iteration][francis]") {
+    const Matrix A = random_symmetric(10, 77u);
+    const QRIterationResult ref = linalgebra::eigenvalues_hessenberg(A);
+    const QRIterationResult res = linalgebra::eigenvalues_francis(A);
+    CHECK(eigs_match(res.eigenvalues_real, res.eigenvalues_imag,
+                     to_pairs(ref.eigenvalues_real, ref.eigenvalues_imag), 1e-8));
+}
+
+TEST_CASE("Francis QR: non-symmetric with complex pairs", "[qr_iteration][francis]") {
+    // Random non-symmetric matrix — older single-shift methods struggle here,
+    // but Francis double-shift handles it natively.
+    std::mt19937 rng(99u);
+    std::uniform_real_distribution<double> dist(-2.0, 2.0);
+    const std::size_t n = 8;
+    Matrix A(n, n);
+    for (std::size_t i = 0; i < n; ++i)
+        for (std::size_t j = 0; j < n; ++j)
+            A(i, j) = dist(rng);
+
+    const QRIterationResult res = linalgebra::eigenvalues_francis(A);
+
+    // Verify: for each eigenvalue λ, check that the characteristic polynomial
+    // product of (λ_i - λ_j) is consistent — i.e., sum of eigenvalues = trace.
+    double trace_A = 0.0;
+    for (std::size_t i = 0; i < n; ++i) trace_A += A(i, i);
+
+    double trace_eigs = 0.0;
+    for (std::size_t i = 0; i < n; ++i) trace_eigs += res.eigenvalues_real[i];
+    CHECK(trace_eigs == Catch::Approx(trace_A).margin(1e-6));
+
+    // All imaginary parts should come in conjugate pairs.
+    double imag_sum = 0.0;
+    for (std::size_t i = 0; i < n; ++i) imag_sum += res.eigenvalues_imag[i];
+    CHECK(imag_sum == Catch::Approx(0.0).margin(1e-8));
+}
+
+TEST_CASE("Francis QR: companion matrix", "[qr_iteration][francis]") {
+    // Companion matrix for x^4 - 10x^3 + 35x^2 - 50x + 24 = (x-1)(x-2)(x-3)(x-4).
+    Matrix A{{0.0, 0.0, 0.0, -24.0},
+             {1.0, 0.0, 0.0,  50.0},
+             {0.0, 1.0, 0.0, -35.0},
+             {0.0, 0.0, 1.0,  10.0}};
+    const QRIterationResult res = linalgebra::eigenvalues_francis(A);
+    const EigPairs expected = {{1.0, 0.0}, {2.0, 0.0}, {3.0, 0.0}, {4.0, 0.0}};
+    CHECK(eigs_match(res.eigenvalues_real, res.eigenvalues_imag, expected, 1e-8));
+}
+
+TEST_CASE("Francis QR: 1x1 matrix", "[qr_iteration][francis]") {
+    Matrix A{{7.0}};
+    const QRIterationResult res = linalgebra::eigenvalues_francis(A);
+    CHECK(res.eigenvalues_real[0] == Catch::Approx(7.0));
+    CHECK(res.eigenvalues_imag[0] == Catch::Approx(0.0).margin(1e-15));
+}

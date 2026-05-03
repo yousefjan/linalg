@@ -65,6 +65,13 @@ void hessenberg_qr_step(Matrix& H, double sigma);
 [[nodiscard]] QRIterationResult eigenvalues_hessenberg(const Matrix& A,
                                                        QRIterationOptions opts = {});
 
+// Francis double-shift QR — implicit bulge chasing on upper Hessenberg form.
+// Handles real matrices with complex conjugate eigenvalue pairs without
+// complex arithmetic.  Uses robust deflation (subdiagonal + 2×2 block).
+// Reference: GVL §7.5, T&B Lecture 29.
+[[nodiscard]] QRIterationResult eigenvalues_francis(const Matrix& A,
+                                                    QRIterationOptions opts = {});
+
 }  // namespace linalgebra
 
 namespace {
@@ -495,6 +502,257 @@ QRIterationResult eigenvalues_hessenberg(const Matrix& A, QRIterationOptions opt
     if (n_found > 0) {
         std::ostringstream oss;
         oss << "eigenvalues_hessenberg: did not converge in "
+            << opts.max_iterations << " iterations ("
+            << n_found << " eigenvalue(s) not yet deflated).";
+        throw NonConvergenceError(oss.str());
+    }
+    return result;
+}
+
+// ---------------------------------------------------------------------------
+// Francis double-shift QR with implicit bulge chasing
+// ---------------------------------------------------------------------------
+
+QRIterationResult eigenvalues_francis(const Matrix& A, QRIterationOptions opts) {
+    require_square(A, "eigenvalues_francis");
+    const std::size_t n = A.rows();
+
+    QRIterationResult result;
+    result.eigenvalues_real = Vector(n, 0.0);
+    result.eigenvalues_imag = Vector(n, 0.0);
+
+    if (opts.track_convergence)
+        result.convergence_history.reserve(
+            static_cast<std::size_t>(opts.max_iterations));
+
+    if (n == 1) {
+        result.eigenvalues_real[0] = A(0, 0);
+        return result;
+    }
+
+    if (n == 2) {
+        const double a = A(0, 0), b = A(0, 1), c = A(1, 0), d = A(1, 1);
+        const double tr = a + d;
+        const double disc = (a - d) * (a - d) + 4.0 * b * c;
+        if (disc >= 0.0) {
+            const double sq = std::sqrt(disc);
+            result.eigenvalues_real[0] = 0.5 * (tr + sq);
+            result.eigenvalues_real[1] = 0.5 * (tr - sq);
+        } else {
+            result.eigenvalues_real[0] = 0.5 * tr;
+            result.eigenvalues_imag[0] = 0.5 * std::sqrt(-disc);
+            result.eigenvalues_real[1] = 0.5 * tr;
+            result.eigenvalues_imag[1] = -0.5 * std::sqrt(-disc);
+        }
+        return result;
+    }
+
+    HessenbergResult hr = hessenberg_reduction(A);
+    Matrix& H = hr.H;
+
+    std::size_t n_found = n;
+    std::size_t active = n;
+
+    auto store_real = [&](double re) {
+        --n_found;
+        result.eigenvalues_real[n_found] = re;
+        result.eigenvalues_imag[n_found] = 0.0;
+    };
+
+    auto store_pair = [&](double re, double im) {
+        --n_found; result.eigenvalues_real[n_found] = re; result.eigenvalues_imag[n_found] = im;
+        --n_found; result.eigenvalues_real[n_found] = re; result.eigenvalues_imag[n_found] = -im;
+    };
+
+    // Robust deflation: checks both subdiagonal magnitude and 2x2 block.
+    auto deflation_tol = [&](std::size_t i) -> double {
+        const double scale = std::abs(H(i - 1, i - 1)) + std::abs(H(i, i));
+        return opts.tolerance * (scale > 0.0 ? scale : 1.0);
+    };
+
+    auto close_2x2 = [&]() {
+        const double a = H(active - 2, active - 2);
+        const double b = H(active - 2, active - 1);
+        const double c = H(active - 1, active - 2);
+        const double d = H(active - 1, active - 1);
+        const double tr = a + d;
+        const double disc = (a - d) * (a - d) + 4.0 * b * c;
+        if (disc >= 0.0) {
+            const double sq = std::sqrt(disc);
+            store_real(0.5 * (tr + sq));
+            store_real(0.5 * (tr - sq));
+        } else {
+            store_pair(0.5 * tr, 0.5 * std::sqrt(-disc));
+        }
+        active -= 2;
+    };
+
+    // Find the start of the active unreduced block (split from the top).
+    auto find_block_start = [&]() -> std::size_t {
+        for (std::size_t i = active - 1; i >= 1; --i) {
+            if (std::abs(H(i, i - 1)) < deflation_tol(i)) {
+                H(i, i - 1) = 0.0;
+                return i;
+            }
+        }
+        return 0;
+    };
+
+    int exceptional_shift_count = 0;
+
+    for (int k = 0; k < opts.max_iterations; ++k) {
+        // Deflate converged eigenvalues from bottom.
+        while (active >= 2) {
+            if (std::abs(H(active - 1, active - 2)) < deflation_tol(active - 1)) {
+                H(active - 1, active - 2) = 0.0;
+                store_real(H(active - 1, active - 1));
+                --active;
+            } else {
+                break;
+            }
+        }
+
+        if (active == 0) break;
+        if (active == 1) { store_real(H(0, 0)); active = 0; break; }
+        if (active == 2) { close_2x2(); break; }
+
+        // Check for 2x2 block deflation (complex pair at bottom).
+        if (active >= 3 && std::abs(H(active - 2, active - 3)) < deflation_tol(active - 2)) {
+            H(active - 2, active - 3) = 0.0;
+            // The bottom 2x2 has converged.
+            const double a = H(active - 2, active - 2);
+            const double b = H(active - 2, active - 1);
+            const double c = H(active - 1, active - 2);
+            const double d = H(active - 1, active - 1);
+            const double tr = a + d;
+            const double disc = (a - d) * (a - d) + 4.0 * b * c;
+            if (disc >= 0.0) {
+                const double sq = std::sqrt(disc);
+                store_real(0.5 * (tr + sq));
+                store_real(0.5 * (tr - sq));
+            } else {
+                store_pair(0.5 * tr, 0.5 * std::sqrt(-disc));
+            }
+            active -= 2;
+            exceptional_shift_count = 0;
+            continue;
+        }
+
+        std::size_t block_start = find_block_start();
+
+        // Compute Francis double shift from bottom 2x2 of active block.
+        const double a11 = H(active - 2, active - 2);
+        const double a12 = H(active - 2, active - 1);
+        const double a21 = H(active - 1, active - 2);
+        const double a22 = H(active - 1, active - 1);
+        double s = a11 + a22;  // trace of bottom 2x2
+        double t = a11 * a22 - a12 * a21;  // determinant of bottom 2x2
+
+        // Exceptional shift (Wilkinson's ad hoc) every 10 iterations to break stalls.
+        if (exceptional_shift_count > 0 && exceptional_shift_count % 10 == 0) {
+            const double w = std::abs(H(active - 1, active - 2))
+                           + std::abs(H(block_start + 1, block_start));
+            s = 1.5 * w;
+            t = w * w;
+        }
+
+        // First column of M = H^2 - sH + tI (implicit).
+        const double h00 = H(block_start, block_start);
+        const double h01 = H(block_start, block_start + 1);
+        const double h10 = H(block_start + 1, block_start);
+        const double h11 = H(block_start + 1, block_start + 1);
+        const double h21 = (block_start + 2 < active) ? H(block_start + 2, block_start + 1) : 0.0;
+
+        double x = h00 * h00 + h01 * h10 - s * h00 + t;
+        double y = h10 * (h00 + h11 - s);
+        double z = h10 * h21;
+
+        // Chase the bulge through the Hessenberg matrix.
+        for (std::size_t i = block_start; i + 2 < active; ++i) {
+            // Determine Householder reflector P such that P * [x; y; z]^T = [*; 0; 0]^T.
+            const std::size_t p = (i + 3 <= active) ? 3 : 2;
+
+            double norm_v = std::sqrt(x * x + y * y + (p == 3 ? z * z : 0.0));
+            if (norm_v == 0.0) break;
+
+            const double sign = (x >= 0.0) ? 1.0 : -1.0;
+            double v0 = x + sign * norm_v;
+            double v1 = y;
+            double v2 = (p == 3) ? z : 0.0;
+
+            const double vdot = v0 * v0 + v1 * v1 + v2 * v2;
+            const double tau = 2.0 / vdot;
+
+            // Apply P from left to H rows [i, i+p-1], columns [max(i-1,0), active-1].
+            const std::size_t col_start = (i > 0) ? i - 1 : 0;
+            for (std::size_t j = col_start; j < active; ++j) {
+                double d = v0 * H(i, j) + v1 * H(i + 1, j);
+                if (p == 3) d += v2 * H(i + 2, j);
+                const double coeff = tau * d;
+                H(i, j) -= coeff * v0;
+                H(i + 1, j) -= coeff * v1;
+                if (p == 3) H(i + 2, j) -= coeff * v2;
+            }
+
+            // Apply P from right to H rows [0, min(i+p, active-1)], columns [i, i+p-1].
+            const std::size_t row_end = std::min(i + p + 1, active);
+            for (std::size_t j = 0; j < row_end; ++j) {
+                double d = v0 * H(j, i) + v1 * H(j, i + 1);
+                if (p == 3) d += v2 * H(j, i + 2);
+                const double coeff = tau * d;
+                H(j, i) -= coeff * v0;
+                H(j, i + 1) -= coeff * v1;
+                if (p == 3) H(j, i + 2) -= coeff * v2;
+            }
+
+            // Prepare for next bulge step.
+            if (i + 3 < active) {
+                x = H(i + 1, i);
+                y = H(i + 2, i);
+                z = (i + 3 < active) ? H(i + 3, i) : 0.0;
+            }
+        }
+
+        // Final 2x2 reflector to restore Hessenberg form at bottom.
+        {
+            const std::size_t i = active - 2;
+            const double xi = H(i, i - 1);
+            const double yi = H(i + 1, i - 1);
+            const double r = std::hypot(xi, yi);
+            if (r > 0.0) {
+                const double c = xi / r;
+                const double s_val = yi / r;
+                // Apply Givens from left.
+                for (std::size_t j = i - 1; j < active; ++j) {
+                    const double t0 = H(i, j);
+                    const double t1 = H(i + 1, j);
+                    H(i, j) = c * t0 + s_val * t1;
+                    H(i + 1, j) = -s_val * t0 + c * t1;
+                }
+                // Apply Givens from right.
+                for (std::size_t j = 0; j < std::min(i + 3, active); ++j) {
+                    const double t0 = H(j, i);
+                    const double t1 = H(j, i + 1);
+                    H(j, i) = c * t0 + s_val * t1;
+                    H(j, i + 1) = -s_val * t0 + c * t1;
+                }
+            }
+        }
+
+        ++exceptional_shift_count;
+
+        if (opts.track_convergence) {
+            double s_norm = 0.0;
+            for (std::size_t ii = 1; ii < active; ++ii)
+                s_norm += H(ii, ii - 1) * H(ii, ii - 1);
+            result.convergence_history.push_back(std::sqrt(s_norm));
+        }
+        ++result.iterations;
+    }
+
+    if (n_found > 0) {
+        std::ostringstream oss;
+        oss << "eigenvalues_francis: did not converge in "
             << opts.max_iterations << " iterations ("
             << n_found << " eigenvalue(s) not yet deflated).";
         throw NonConvergenceError(oss.str());

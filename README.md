@@ -57,18 +57,20 @@ ctest --test-dir build --output-on-failure
 - LU factorization with partial pivoting (`lu_factor`, `lu_solve`)
 - QR factorization — classical GS, modified GS, and Householder (`qr_classical_gs`, 
   `qr_modified_gs`, `qr_householder`)
+- Rank-revealing QR — Householder with column pivoting (`qr_colpiv`); reports numerical rank
+  and ensures |R(i,i)| ≥ |R(i+1,i+1)|
 - Eigenvalue computation via QR iteration:
   - Unshifted QR (`eigenvalues_unshifted`) — linear convergence, T&B Algorithm 28.1
   - Wilkinson-shifted QR (`eigenvalues_shifted`) — typically cubic convergence, T&B Lecture 29
   - Hessenberg + Givens QR (`eigenvalues_hessenberg`) — O(n²) per step after one O(n³) reduction; 
     ~10–30× faster than `eigenvalues_shifted` for n ≥ 50
+  - Francis double-shift QR (`eigenvalues_francis`) — implicit bulge chasing on Hessenberg form;
+    handles complex conjugate eigenvalue pairs without complex arithmetic; robust subdiagonal +
+    2×2 block deflation with exceptional shifts (GVL §7.5)
+- Cholesky factorization (`cholesky_factor`, `cholesky_solve`) — for symmetric positive definite systems
 
 ## TODO:
-- [ ] Cholesky factorization (cholesky) — for symmetric positive definite systems
-- [ ] Rank-revealing QR — Householder QR with column pivoting (qr_colpiv)
 - [ ] Symmetric tridiagonalization — Householder reduction before symmetric QR (tridiagonalize)
-- [ ] Francis double-shift QR — bulge chasing for real matrices with complex conjugate eigenvalue pairs (eigenvalues_francis)
-- [ ] Deflation — robust subdiagonal + 2×2 block deflation in Hessenberg QR
 - [ ] Eigenvectors via inverse iteration (eigenvectors_inverse_iteration)
 - [ ] SVD — Golub-Kahan bidiagonalization + QR (svd)
 - [ ] Conjugate Gradient (solve_cg) — for symmetric positive definite systems

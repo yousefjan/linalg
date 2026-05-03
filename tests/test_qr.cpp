@@ -223,3 +223,64 @@ TEST_CASE("QR: linearly dependent columns throw from GS methods", "[qr]") {
     CHECK_THROWS_AS(linalgebra::qr_modified_gs(A), SingularMatrixError);
     CHECK_NOTHROW(linalgebra::qr_householder(A));
 }
+
+// ---------------------------------------------------------------------------
+// qr_colpiv tests
+// ---------------------------------------------------------------------------
+
+TEST_CASE("QR ColPiv: full rank reconstruction", "[qr][colpiv]") {
+    const Matrix A = random_matrix(6, 4, 100u);
+    auto result = linalgebra::qr_colpiv(A);
+
+    // A * P = Q * R  =>  reconstruct A(:, perm) = Q * R
+    const std::size_t m = A.rows();
+    const std::size_t n = A.cols();
+
+    // Build A*P (permuted columns of A).
+    Matrix AP(m, n);
+    for (std::size_t j = 0; j < n; ++j)
+        for (std::size_t i = 0; i < m; ++i)
+            AP(i, j) = A(i, result.perm[j]);
+
+    const Matrix QR = result.Q * result.R;
+    double err = 0.0;
+    for (std::size_t i = 0; i < m; ++i)
+        for (std::size_t j = 0; j < n; ++j) {
+            double d = AP(i, j) - QR(i, j);
+            err += d * d;
+        }
+    CHECK(std::sqrt(err) < 1e-12);
+    CHECK(result.rank == n);
+}
+
+TEST_CASE("QR ColPiv: rank deficient matrix", "[qr][colpiv]") {
+    // Rank 2 matrix (col 2 = col 0 + col 1).
+    Matrix A{
+        {1.0, 2.0, 3.0},
+        {4.0, 5.0, 9.0},
+        {7.0, 8.0, 15.0},
+        {2.0, 1.0, 3.0}
+    };
+    auto result = linalgebra::qr_colpiv(A);
+    CHECK(result.rank == 2);
+}
+
+TEST_CASE("QR ColPiv: R diagonal magnitudes are non-increasing", "[qr][colpiv]") {
+    const Matrix A = random_matrix(8, 5, 42u);
+    auto result = linalgebra::qr_colpiv(A);
+
+    for (std::size_t i = 0; i + 1 < result.rank; ++i) {
+        CHECK(std::abs(result.R(i, i)) >= std::abs(result.R(i + 1, i + 1)) - 1e-14);
+    }
+}
+
+TEST_CASE("QR ColPiv: identity matrix", "[qr][colpiv]") {
+    auto I = Matrix::identity(4);
+    auto result = linalgebra::qr_colpiv(I);
+    CHECK(result.rank == 4);
+}
+
+TEST_CASE("QR ColPiv: fat matrix throws", "[qr][colpiv]") {
+    Matrix A(3, 5);
+    CHECK_THROWS_AS(linalgebra::qr_colpiv(A), DimensionMismatchError);
+}
