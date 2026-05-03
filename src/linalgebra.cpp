@@ -8,3 +8,4 @@ export import :triangular_solve;
 export import :lu;
 export import :qr;
 export import :qr_iteration;
+export import :cholesky;

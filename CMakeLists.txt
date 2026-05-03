@@ -36,6 +36,7 @@ target_sources(linear_algebra
         src/lu.cpp
         src/qr.cpp
         src/qr_iteration.cpp
+        src/cholesky.cpp
 )
 
 target_compile_features(linear_algebra PUBLIC cxx_std_23)
@@ -90,6 +91,7 @@ if(LINEAR_ALGEBRA_BUILD_TESTS)
         tests/test_lu.cpp
         tests/test_qr.cpp
         tests/test_qr_iteration.cpp
+        tests/test_cholesky.cpp
     )
 
     target_link_libraries(linear_algebra_tests
