@@ -37,6 +37,11 @@ target_sources(linear_algebra
         src/qr.cpp
         src/qr_iteration.cpp
         src/cholesky.cpp
+        src/sym_eigen.cpp
+        src/svd.cpp
+        src/iterative.cpp
+        src/precond.cpp
+        src/expm.cpp
 )
 
 target_compile_features(linear_algebra PUBLIC cxx_std_23)
@@ -59,17 +64,6 @@ elseif(MSVC)
     endif()
 endif()
 
-option(LINEAR_ALGEBRA_BUILD_EXPERIMENTS "Build experiment programs" ON)
-if(LINEAR_ALGEBRA_BUILD_EXPERIMENTS)
-    add_executable(pivoting_vs_no_pivoting experiments/pivoting_vs_no_pivoting.cpp)
-    target_link_libraries(pivoting_vs_no_pivoting PRIVATE linear_algebra::core)
-
-    add_executable(hilbert_qr experiments/hilbert_qr.cpp)
-    target_link_libraries(hilbert_qr PRIVATE linear_algebra::core)
-
-    add_executable(matmul experiments/matmul.cpp)
-    target_link_libraries(matmul PRIVATE linear_algebra::core)
-endif()
 
 if(LINEAR_ALGEBRA_BUILD_TESTS)
     include(FetchContent)
@@ -92,6 +86,11 @@ if(LINEAR_ALGEBRA_BUILD_TESTS)
         tests/test_qr.cpp
         tests/test_qr_iteration.cpp
         tests/test_cholesky.cpp
+        tests/test_sym_eigen.cpp
+        tests/test_svd.cpp
+        tests/test_iterative.cpp
+        tests/test_precond.cpp
+        tests/test_expm.cpp
     )
 
     target_link_libraries(linear_algebra_tests

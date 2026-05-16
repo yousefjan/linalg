@@ -14,9 +14,7 @@ import :qr;
 
 export namespace linalgebra {
 
-// ---------------------------------------------------------------------------
 // Options
-// ---------------------------------------------------------------------------
 
 struct QRIterationOptions {
     double tolerance = 1e-10;
@@ -509,9 +507,7 @@ QRIterationResult eigenvalues_hessenberg(const Matrix& A, QRIterationOptions opt
     return result;
 }
 
-// ---------------------------------------------------------------------------
 // Francis double-shift QR with implicit bulge chasing
-// ---------------------------------------------------------------------------
 
 QRIterationResult eigenvalues_francis(const Matrix& A, QRIterationOptions opts) {
     require_square(A, "eigenvalues_francis");

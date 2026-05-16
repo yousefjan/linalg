@@ -4,7 +4,7 @@ I mostly follow Trefethen & Bau, "Numerical Linear Algebra" and Golub & Van Loan
 Computations."
 The implementation uses `NEON` SIMD on ARM64 systems when available.
 
-## Build
+### Build
 
 The library is packaged as a C++20 named module (`linalgebra`): 
 
@@ -14,8 +14,7 @@ The library is packaged as a C++20 named module (`linalgebra`):
   doesn't yet support module dependency scanning)
 
 ```bash
-cmake -S . -B build -G Ninja \
-  -DCMAKE_CXX_COMPILER=/opt/homebrew/opt/llvm/bin/clang++
+cmake -S . -B build -G Ninja -DCMAKE_CXX_COMPILER=/opt/homebrew/opt/llvm/bin/clang++
 cmake --build build
 ```
 
@@ -29,7 +28,7 @@ cmake -S . -B build -G Ninja \
 
 Valid values are `AUTO` (uses available SIMD) and `NONE` (forces scalar fallback).
 
-## Usage
+### Usage
 
 Import the module:
 
@@ -44,13 +43,13 @@ int main() {
 }
 ```
 
-## Run tests
+### Run tests
 
 ```bash
 ctest --test-dir build --output-on-failure
 ```
 
-## What's implemented
+### What's implemented
 
 - Matrix / Vector core with SIMD matmul
 - Triangular solvers (forward / backward substitution)
@@ -67,25 +66,15 @@ ctest --test-dir build --output-on-failure
   - Francis double-shift QR (`eigenvalues_francis`) — implicit bulge chasing on Hessenberg form;
     handles complex conjugate eigenvalue pairs without complex arithmetic; robust subdiagonal +
     2×2 block deflation with exceptional shifts (GVL §7.5)
-- Cholesky factorization (`cholesky_factor`, `cholesky_solve`) — for symmetric positive definite systems
-
-## TODO:
-- [ ] Symmetric tridiagonalization — Householder reduction before symmetric QR (tridiagonalize)
-- [ ] Eigenvectors via inverse iteration (eigenvectors_inverse_iteration)
-- [ ] SVD — Golub-Kahan bidiagonalization + QR (svd)
-- [ ] Conjugate Gradient (solve_cg) — for symmetric positive definite systems
-- [ ] GMRES (solve_gmres) — for general non-symmetric systems
-- [ ] BiCGSTAB (solve_bicgstab) — lighter alternative to GMRES
-- [ ] Condition number estimation — norm-based LINPACK estimator
-- [ ] Preconditioners (precond_jacobi, precond_ilu0) — diagonal and ILU(0) 
-- [ ] Least squares solver (lstsq) — via QR or SVD with rank-deficient handling
-- [ ] Arnoldi iteration (arnoldi) — falls out naturally from GMRES
-- [ ] Matrix exponential (expm) — via Padé approximation
-
-## Run experiments
-
-```bash
-./build/matmul
-./build/pivoting_vs_no_pivoting   
-./build/hilbert_qr              
-```
+- Cholesky factorization (`cholesky_factor`, `cholesky_solve`) 
+- Symmetric tridiagonalization
+- Eigenvectors via inverse iteration (eigenvectors_inverse_iteration)
+- SVD — Golub-Kahan bidiagonalization + QR (svd)
+- Conjugate Gradient (solve_cg)
+- GMRES (solve_gmres)
+- BiCGSTAB (solve_bicgstab)
+- Condition number estimation
+- Preconditioners (precond_jacobi, precond_ilu0)
+- Least squares solver (lstsq)
+- Arnoldi iteration (arnoldi)
+- Matrix exponential (expm)

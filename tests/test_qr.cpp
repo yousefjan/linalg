@@ -224,9 +224,7 @@ TEST_CASE("QR: linearly dependent columns throw from GS methods", "[qr]") {
     CHECK_NOTHROW(linalgebra::qr_householder(A));
 }
 
-// ---------------------------------------------------------------------------
 // qr_colpiv tests
-// ---------------------------------------------------------------------------
 
 TEST_CASE("QR ColPiv: full rank reconstruction", "[qr][colpiv]") {
     const Matrix A = random_matrix(6, 4, 100u);

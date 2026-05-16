@@ -423,9 +423,7 @@ TEST_CASE("Hessenberg QR: faster than naive shifted QR for large n",
     std::cout << "=============================================\n";
 }
 
-// ---------------------------------------------------------------------------
 // Francis double-shift QR tests
-// ---------------------------------------------------------------------------
 
 TEST_CASE("Francis QR: 2x2 real eigenvalues", "[qr_iteration][francis]") {
     Matrix A{{3.0, 1.0}, {0.0, 2.0}};
